@@ -253,8 +253,9 @@ const CONFIG = {
   function parseEngagement(str) {
     if (!str || str === '') return 0;
     str = str.trim().toUpperCase();
-    if (str.includes('K')) return parseFloat(str) * 3000;
-    if (str.includes('M')) return parseFloat(str) * 3000000;
+    if (str.includes('K')) return parseFloat(str) * 1000;
+    if (str.includes('M')) return parseFloat(str) * 1000000;
+    if (str.includes('B')) return parseFloat(str) * 1000000000;
     return parseInt(str.replace(/,/g, '')) || 0;
   }
   
