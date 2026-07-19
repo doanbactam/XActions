@@ -83,6 +83,10 @@ const CONFIG = {
   
   const TRACKING_KEY = 'xactions_follow_tracking';
   const FOLLOWERS_KEY = 'xactions_my_current_followers';
+  // Shared with protect-active-users.js and whitelist.js so a user marked
+  // protected/whitelisted by either script is never touched here.
+  const PROTECTED_KEY = 'xactions_protected_users';
+  const WHITELIST_KEY = 'xactions_whitelist';
   
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🧠 SMART UNFOLLOW                                         ║');
@@ -196,7 +200,29 @@ const CONFIG = {
     if (saved) trackingData = JSON.parse(saved);
     console.log(`📚 Loaded ${Object.keys(trackingData).length} tracked follows`);
   } catch (e) {}
-  
+
+  // Load protected users (from protect-active-users.js: engaged likers/
+  // repliers/retweeters) and the shared whitelist (from whitelist.js) so
+  // both lists are respected here too, not just CONFIG.whitelist.
+  const protectedUsers = new Set();
+  try {
+    const saved = localStorage.getItem(PROTECTED_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      (data.users || []).forEach(u => u.username && protectedUsers.add(u.username.toLowerCase()));
+    }
+  } catch (e) {}
+  try {
+    const saved = localStorage.getItem(WHITELIST_KEY);
+    if (saved) {
+      const list = JSON.parse(saved);
+      (Array.isArray(list) ? list : []).forEach(u => u.username && protectedUsers.add(u.username.toLowerCase()));
+    }
+  } catch (e) {}
+  if (protectedUsers.size > 0) {
+    console.log(`🛡️ Loaded ${protectedUsers.size} protected/whitelisted users (never unfollowed)`);
+  }
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - CONFIG.daysToWait);
   
@@ -226,9 +252,10 @@ const CONFIG = {
         newUsersThisPass++;
       }
 
-      // Skip whitelist
+      // Skip whitelist (inline CONFIG list + shared whitelist.js / protect-active-users.js lists)
       if (CONFIG.whitelist.includes(username.toLowerCase())) continue;
-      
+      if (protectedUsers.has(username.toLowerCase())) continue;
+
       // Check if follows you
       if (myFollowers.has(username) || cell.querySelector($followsYou)) {
         continue; // Mutual - keep

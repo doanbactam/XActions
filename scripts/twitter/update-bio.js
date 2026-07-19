@@ -96,7 +96,17 @@ const CONFIG = {
       bioField = document.querySelector($bioTextarea) || document.querySelector($bioInput);
     }
   }
-  
+
+  // The settings page (or the modal we just opened) may still be mounting
+  // its form on first paint. Poll briefly before giving up instead of
+  // failing immediately on a field that would appear a moment later.
+  let waitAttempts = 0;
+  while (!bioField && waitAttempts < 3) {
+    await sleep(CONFIG.actionDelay);
+    bioField = document.querySelector($bioTextarea) || document.querySelector($bioInput);
+    waitAttempts++;
+  }
+
   if (!bioField) {
     console.error('❌ ERROR: Bio field not found!');
     console.log('');

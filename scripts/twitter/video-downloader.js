@@ -44,6 +44,8 @@ const CONFIG = {
  */
 
 (async function videoDownloader() {
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║  🎬 VIDEO DOWNLOADER                                       ║');
   console.log('║  by nichxbt - https://github.com/nirholas/XActions         ║');
@@ -152,14 +154,73 @@ const CONFIG = {
     });
   }
   
+  // Download a single video (fetch as blob so the saved file gets a real
+  // filename instead of whatever video.twimg.com's URL path ends in).
+  async function downloadVideo(video, filename) {
+    try {
+      const response = await fetch(video.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      return true;
+    } catch (e) {
+      console.log(`⚠️ Auto-download failed for ${video.resolution}. Opening in new tab...`);
+      window.open(video.url, '_blank');
+      return false;
+    }
+  }
+
+  // 'all' downloads every quality variant found, not just one
+  if (CONFIG.quality === 'all') {
+    console.log(`🎯 Quality set to "all": downloading all ${videos.length} variant(s)`);
+    console.log('');
+
+    if (CONFIG.autoDownload) {
+      for (let i = 0; i < videos.length; i++) {
+        const v = videos[i];
+        console.log(`💾 Downloading ${i + 1}/${videos.length} (${v.resolution})...`);
+        await downloadVideo(v, `twitter_video_${Date.now()}_${v.resolution}.mp4`);
+        // Small delay so the browser isn't asked to start N simultaneous
+        // blob downloads at once.
+        if (i < videos.length - 1) await sleep(800);
+      }
+      console.log('✅ All downloads started!');
+    }
+
+    try {
+      await navigator.clipboard.writeText(videos[0].url);
+      console.log('📋 Highest quality URL copied to clipboard!');
+    } catch (e) {}
+
+    console.log('');
+    console.log('💡 You can also right-click the video URL above and "Open in new tab"');
+    console.log('   then right-click the video and "Save video as..."');
+    console.log('');
+
+    window.videoUrls = videos;
+    console.log('💡 Access all URLs via: window.videoUrls');
+
+    return videos;
+  }
+
   // Get preferred video
   let selectedVideo;
   if (CONFIG.quality === 'highest') {
     selectedVideo = videos[0];
   } else if (CONFIG.quality === 'lowest') {
     selectedVideo = videos[videos.length - 1];
+  } else {
+    console.warn(`⚠️ Unknown CONFIG.quality "${CONFIG.quality}", defaulting to "highest".`);
+    selectedVideo = videos[0];
   }
-  
+
   if (selectedVideo) {
     console.log(`🎯 Selected: ${selectedVideo.resolution}`);
     console.log('');

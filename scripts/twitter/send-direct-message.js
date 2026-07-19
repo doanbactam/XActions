@@ -140,7 +140,9 @@ Best,
     // Send DM to a single user
     sendTo: async (username, customMessage = null) => {
       const cleanUsername = username.replace('@', '').toLowerCase();
-      const message = customMessage || CONFIG.messageTemplate.replace('{username}', cleanUsername);
+      // split/join instead of .replace() so every occurrence of the
+      // placeholder is substituted, not just the first one.
+      const message = customMessage || CONFIG.messageTemplate.split('{username}').join(cleanUsername);
       
       console.log(`💬 Sending DM to @${cleanUsername}...`);
       
@@ -256,17 +258,20 @@ Best,
       console.log('');
       
       state.isRunning = true;
-      
-      for (const username of CONFIG.targetUsers) {
+
+      for (let i = 0; i < CONFIG.targetUsers.length; i++) {
         if (!state.isRunning) break;
         if (state.stats.sent >= CONFIG.limits.messagesPerSession) {
           console.log(`🛑 Reached limit of ${CONFIG.limits.messagesPerSession} messages.`);
           break;
         }
-        
-        await window.XActions.DM.sendTo(username);
-        
-        if (state.isRunning && CONFIG.targetUsers.indexOf(username) < CONFIG.targetUsers.length - 1) {
+
+        await window.XActions.DM.sendTo(CONFIG.targetUsers[i]);
+
+        // Use the loop index, not indexOf(), so a duplicate username in
+        // targetUsers can't make this resolve to the wrong (earlier) entry
+        // and skip the delay before the real last message.
+        if (state.isRunning && i < CONFIG.targetUsers.length - 1) {
           console.log(`⏳ Waiting ${CONFIG.limits.delayBetweenMessages / 1000}s before next message...`);
           await randomDelay(CONFIG.limits.delayBetweenMessages);
         }

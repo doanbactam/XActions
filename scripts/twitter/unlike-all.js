@@ -106,6 +106,7 @@
   }
 
   console.log('🚀 Starting unlike process...');
+  console.log('💡 To stop early: window.stopUnlike()');
   console.log('');
 
   // Stats tracking
@@ -117,9 +118,14 @@
 
   let scrollAttempts = 0;
   let lastButtonCount = 0;
+  let stopped = false;
+  window.stopUnlike = () => {
+    stopped = true;
+    console.log('🛑 Stopping after the current unlike...');
+  };
 
   // Main loop
-  while (stats.unliked < CONFIG.maxUnlikes) {
+  while (stats.unliked < CONFIG.maxUnlikes && !stopped) {
     const unlikeButtons = getUnlikeButtons();
     
     if (unlikeButtons.length === 0) {
@@ -177,6 +183,8 @@
       break;
     }
   }
+
+  delete window.stopUnlike;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 📊 COMPLETION SUMMARY

@@ -97,14 +97,20 @@ const CONFIG = {
   
   console.log('🚀 Starting to unfollow non-followers...');
   console.log('💡 Accounts with "Follows you" badge will be kept.');
+  console.log('💡 To stop early: window.stopUnfollow()');
   console.log('');
-  
+
   let totalUnfollowed = 0;
   let totalKept = 0;
   let retries = 0;
+  let stopped = false;
   const seenUsers = new Set();
+  window.stopUnfollow = () => {
+    stopped = true;
+    console.log('🛑 Stopping after the current unfollow...');
+  };
 
-  while (retries < CONFIG.maxRetries) {
+  while (retries < CONFIG.maxRetries && !stopped) {
     // Scroll to bottom to load more users
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(CONFIG.scrollDelay);
@@ -122,9 +128,12 @@ const CONFIG = {
     let progressThisPass = 0;
 
     for (const btn of buttons) {
+      if (stopped) break;
+
       // Check max unfollows limit
       if (CONFIG.maxUnfollows > 0 && totalUnfollowed >= CONFIG.maxUnfollows) {
         console.log(`\n✅ Reached limit of ${CONFIG.maxUnfollows} unfollows!`);
+        delete window.stopUnfollow;
         logSummary();
         return;
       }
@@ -196,11 +205,13 @@ const CONFIG = {
       console.log(`⏳ No new accounts this pass. Retry ${retries}/${CONFIG.maxRetries}...`);
     }
   }
-  
+
+  delete window.stopUnfollow;
+
   function logSummary() {
     console.log('');
     console.log('╔════════════════════════════════════════════════════════════╗');
-    console.log('║  ✅ COMPLETE!                                              ║');
+    console.log(stopped ? '║  🛑 STOPPED BY USER                                        ║' : '║  ✅ COMPLETE!                                              ║');
     console.log('╚════════════════════════════════════════════════════════════╝');
     console.log(`🚫 Unfollowed (non-followers): ${totalUnfollowed}`);
     console.log(`💚 Kept (mutual followers): ${totalKept}`);

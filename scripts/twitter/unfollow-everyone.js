@@ -91,12 +91,18 @@ const CONFIG = {
   }
   
   console.log('🚀 Starting mass unfollow...');
+  console.log('💡 To stop early: window.stopUnfollow()');
   console.log('');
-  
+
   let totalUnfollowed = 0;
   let retries = 0;
-  
-  while (retries < CONFIG.maxRetries) {
+  let stopped = false;
+  window.stopUnfollow = () => {
+    stopped = true;
+    console.log('🛑 Stopping after the current unfollow...');
+  };
+
+  while (retries < CONFIG.maxRetries && !stopped) {
     // Scroll to bottom to load more users
     window.scrollTo(0, document.body.scrollHeight);
     await sleep(CONFIG.scrollDelay);
@@ -114,10 +120,13 @@ const CONFIG = {
     let confirmedThisPass = 0;
 
     for (const btn of buttons) {
+      if (stopped) break;
+
       // Check max unfollows limit
       if (CONFIG.maxUnfollows > 0 && totalUnfollowed >= CONFIG.maxUnfollows) {
         console.log(`\n✅ Reached limit of ${CONFIG.maxUnfollows} unfollows!`);
         console.log(`📊 Total unfollowed: ${totalUnfollowed}`);
+        delete window.stopUnfollow;
         return { total: totalUnfollowed };
       }
       
@@ -152,13 +161,15 @@ const CONFIG = {
       console.log(`⏳ No unfollows confirmed this pass. Retry ${retries}/${CONFIG.maxRetries}...`);
     }
   }
-  
+
+  delete window.stopUnfollow;
+
   console.log('');
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║  ✅ COMPLETE!                                              ║');
+  console.log(stopped ? '║  🛑 STOPPED BY USER                                        ║' : '║  ✅ COMPLETE!                                              ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log(`📊 Total unfollowed: ${totalUnfollowed}`);
   console.log('');
-  
+
   return { total: totalUnfollowed };
 })();

@@ -188,6 +188,24 @@ const CONFIG = {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // Navigate within the SPA via history.pushState + a synthetic popstate.
+  // Assigning window.location.href triggers a full page reload, which wipes
+  // this console script's entire state (posts collected so far, panel, etc.)
+  // mid-run. Only fall back to a real navigation if the SPA route never
+  // takes (e.g. React hasn't mounted its popstate listener yet).
+  function spaNavigate(url) {
+    try {
+      const target = new URL(url, window.location.href);
+      if (target.origin === window.location.origin) {
+        window.history.pushState({}, '', target.href);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        return true;
+      }
+    } catch (e) { /* fall through to hard navigation */ }
+    window.location.href = url;
+    return false;
+  }
+
   /** Wait while paused, checking every 200ms. */
   async function waitWhilePaused() {
     while (state.paused && !state.stopped) {
@@ -1033,8 +1051,11 @@ const CONFIG = {
     if (targetLink) {
       targetLink.click();
     } else {
-      // Fallback: direct navigation
-      window.location.href = postUrl;
+      // Fallback: the post's own article scrolled out of view / was
+      // virtualized away, so there's no link to click. Use SPA navigation
+      // (not a hard window.location.href reload, which would kill this
+      // entire running scraper and lose all progress collected so far).
+      spaNavigate(postUrl);
     }
 
     await sleep(CONFIG.navigationDelay);
@@ -1140,8 +1161,11 @@ const CONFIG = {
         // Check we landed on the right page
         const onTweet = window.location.href.includes('/status/');
         if (!onTweet) {
-          panelLog(`⚠ Navigation failed for post ${i + 1}, retrying direct…`, 'warn');
-          window.location.href = post.url;
+          panelLog(`⚠ Navigation failed for post ${i + 1}, retrying…`, 'warn');
+          // SPA navigation, not window.location.href: a hard reload here
+          // would destroy this running script and lose every post/reply
+          // collected so far.
+          spaNavigate(post.url);
           await sleep(CONFIG.navigationDelay + 1000);
         }
 
@@ -1170,10 +1194,12 @@ const CONFIG = {
         panelLog(`⚠ Error on post ${i + 1}: ${err.message}`, 'err');
         state.errors.push({ postId: post.id, error: err.message });
 
-        // Try to get back to the profile
+        // Try to get back to the profile. SPA navigation, not a hard
+        // reload: this runs mid-loop, so destroying the script here would
+        // silently abandon every remaining post.
         try {
           if (!window.location.href.includes(state.originalUrl.split('x.com/')[1]?.split('/')[0])) {
-            window.location.href = state.originalUrl;
+            spaNavigate(state.originalUrl);
             await sleep(CONFIG.navigationDelay);
           }
         } catch (_) {
