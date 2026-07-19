@@ -116,6 +116,38 @@ function x402Gate(request, url, api) {
   });
 }
 
+// X account actions (follow / unfollow / like / reply / post / DM / host a
+// Space) require the user's logged-in X session. The hosted service does not
+// custody session tokens or drive accounts server-side — those actions run in
+// the browser extension instead. Reads (scrape, analytics, search) are fine to
+// run server-side and just proxy to API_ORIGIN.
+const ACCOUNT_ACTION_RE =
+  /^\/api\/(ai\/(action|engagement|posting|messages)\/|automations|operations|engagement\b)/;
+
+function requiresExtension(path) {
+  if (ACCOUNT_ACTION_RE.test(path)) return true;
+  // Space writes need a session; spaces reads (list/status/transcript) do not.
+  if (/^\/api\/ai\/spaces\/(host|join|leave)\b/.test(path)) return true;
+  return false;
+}
+
+function extensionResponse(request) {
+  return json(
+    {
+      error: 'account_action_requires_extension',
+      message:
+        'X account actions (follow, unfollow, like, reply, post) run in the ' +
+        'XActions browser extension, in your own logged-in session — the ' +
+        'hosted service never stores your X credentials or acts on your ' +
+        'account server-side.',
+      extension: 'https://xactions.app/extension',
+      docs: 'https://github.com/nirholas/XActions/blob/main/docs/extension.md',
+    },
+    501,
+    corsHeaders(request)
+  );
+}
+
 async function proxyToOrigin(request, url, env) {
   const origin = env.API_ORIGIN;
   if (!origin) {
@@ -123,7 +155,7 @@ async function proxyToOrigin(request, url, env) {
       {
         error: 'API origin not configured',
         message:
-          'This route needs the full Node backend (database, job queue, browser automation). ' +
+          'This route needs the full Node backend (database, analytics, scraping). ' +
           'Set the API_ORIGIN var on the Worker to your Railway/Fly/Docker deployment URL.',
       },
       503,
@@ -202,6 +234,11 @@ export default {
     if (path === '/api/ai/pricing') {
       return json({ pricing: api.AI_OPERATION_PRICES }, 200, corsHeaders(request));
     }
+
+    // Account actions run in the extension, not server-side — answer before the
+    // payment gate so an agent is never charged for something the hosted
+    // service will not execute.
+    if (requiresExtension(path)) return extensionResponse(request);
 
     const paymentChallenge = x402Gate(request, url, api);
     if (paymentChallenge) return paymentChallenge;
