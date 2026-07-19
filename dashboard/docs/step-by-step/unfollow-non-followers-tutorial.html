@@ -98,7 +98,7 @@
 </blockquote>
 <p><strong>Works on:</strong> 🌐 Browser Console · 💻 CLI · 🤖 MCP (AI Agents)<br><strong>Difficulty:</strong> 🟢 Beginner<br><strong>Time:</strong> ⏱️ 5–20 minutes<br><strong>Requirements:</strong> A web browser logged into x.com</p>
 <blockquote>
-<p>📖 For the quick-reference version, see <a href="../unfollow-non-followers.md">unfollow-non-followers.md</a></p>
+<p>📖 For the quick-reference version, see <a href="/docs/unfollow-non-followers">unfollow-non-followers.md</a></p>
 </blockquote>
 <hr>
 <h2>🎯 Real-World Scenario</h2>
@@ -790,7 +790,7 @@ npx xactions unfollow --non-followers \
 </li>
 <li><p><strong>Do 50–100 per session, not all at once</strong> — X is more lenient with gradual cleanup. Running 3 sessions of 50 unfollows with 30-minute gaps between is safer than blasting through 150 in one go.</p>
 </li>
-<li><p><strong>Pair this with &quot;Detect Unfollowers&quot; for ongoing hygiene</strong> — Run <a href="../detect-unfollowers.md">detect-unfollowers</a> weekly to catch new non-followers as they appear, rather than letting them pile up again.</p>
+<li><p><strong>Pair this with &quot;Detect Unfollowers&quot; for ongoing hygiene</strong> — Run <a href="/docs/detect-unfollowers">detect-unfollowers</a> weekly to catch new non-followers as they appear, rather than letting them pile up again.</p>
 </li>
 <li><p><strong>Check your ratio after cleanup</strong> — If you started at 2,100/890 (0.42x) and removed 1,210 non-followers, you&#39;ll be at 890/890 (1.0x). That&#39;s a massive algorithm signal — X shows your tweets to more people when your ratio is healthy.</p>
 </li>
@@ -820,32 +820,32 @@ npx xactions unfollow --non-followers \
 <tbody><tr>
 <td>Unfollow Everyone</td>
 <td>Go fully nuclear — unfollow ALL accounts</td>
-<td><a href="../unfollow-everyone.md">→ Guide</a></td>
+<td><a href="/docs/unfollow-everyone">→ Guide</a></td>
 </tr>
 <tr>
 <td>Smart Unfollow</td>
 <td>Unfollow inactive accounts with a whitelist</td>
-<td><a href="../smart-unfollow.md">→ Guide</a></td>
+<td><a href="/docs/smart-unfollow">→ Guide</a></td>
 </tr>
 <tr>
 <td>Detect Unfollowers</td>
 <td>Find out who unfollowed you recently</td>
-<td><a href="../detect-unfollowers.md">→ Guide</a></td>
+<td><a href="/docs/detect-unfollowers">→ Guide</a></td>
 </tr>
 <tr>
 <td>Following Scraping</td>
 <td>Export your full following list to CSV</td>
-<td><a href="../following-scraping.md">→ Guide</a></td>
+<td><a href="/docs/following-scraping">→ Guide</a></td>
 </tr>
 <tr>
 <td>Followers Scraping</td>
 <td>Export your followers to a spreadsheet</td>
-<td><a href="../followers-scraping.md">→ Guide</a></td>
+<td><a href="/docs/followers-scraping">→ Guide</a></td>
 </tr>
 <tr>
 <td>Growth Suite</td>
 <td>Auto-follow + auto-like + auto-comment in one</td>
-<td><a href="../growth-suite.md">→ Guide</a></td>
+<td><a href="/docs/growth-suite">→ Guide</a></td>
 </tr>
 </tbody></table>
 <hr>
@@ -857,7 +857,7 @@ npx xactions unfollow --non-followers \
 <h3>Q: Can I protect certain accounts from being unfollowed?</h3>
 <p><strong>A:</strong> The current browser script unfollows all non-followers automatically. To protect specific accounts, lower the <code>MAX_UNFOLLOWS</code> count and review the preview list before confirming — or use the <code>--export-only</code> CLI flag to review the list first, then manually remove accounts you want to keep from the unfollow batch.</p>
 <h3>Q: How often should I clean up non-followers?</h3>
-<p><strong>A:</strong> Once a month is a good cadence. Pair this script with <a href="../detect-unfollowers.md">Detect Unfollowers</a> to get alerts when someone unfollows you, so you can address it in real time rather than letting non-followers accumulate.</p>
+<p><strong>A:</strong> Once a month is a good cadence. Pair this script with <a href="/docs/detect-unfollowers">Detect Unfollowers</a> to get alerts when someone unfollows you, so you can address it in real time rather than letting non-followers accumulate.</p>
 <h3>Q: Is this the same as &quot;unfollow everyone&quot;?</h3>
 <p><strong>A:</strong> No — &quot;Unfollow Everyone&quot; removes <strong>all</strong> accounts you follow, including mutuals. &quot;Unfollow Non-Followers&quot; only removes people who <strong>don&#39;t follow you back</strong>, keeping your mutual connections intact.</p>
 <hr>
