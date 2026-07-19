@@ -222,9 +222,12 @@ h1, h2, h3, h4 { line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; co
 .copy-btn:hover { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
 .copy-btn.copied { color: var(--green); border-color: var(--green); }
 
-/* ---- Scroll reveal ---- */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
-.reveal.in { opacity: 1; transform: none; }
+/* ---- Scroll reveal ----
+   Content is visible by default; only when JS confirms it can drive the
+   animation (html.js) do we hide-then-reveal. No-JS and any observer
+   failure leave everything readable. */
+.js .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.js .reveal.in { opacity: 1; transform: none; }
 .reveal[data-delay="1"] { transition-delay: 0.07s; }
 .reveal[data-delay="2"] { transition-delay: 0.14s; }
 .reveal[data-delay="3"] { transition-delay: 0.21s; }

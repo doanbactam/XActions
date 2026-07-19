@@ -4,15 +4,23 @@
 (function () {
   'use strict';
 
+  /* Signal that JS is active so CSS can enable the hide-then-reveal animation
+     (content stays visible if this script never runs). */
+  document.documentElement.classList.add('js');
+
   /* ---- Scroll reveal ---- */
   const reveal = document.querySelectorAll('.reveal');
+  const showAll = () => reveal.forEach((el) => el.classList.add('in'));
   if (reveal.length && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
     reveal.forEach((el) => io.observe(el));
+    // Safety net: if anything hasn't revealed within 2.5s (e.g. printed,
+    // captured, or observer wedged), show it so content is never stuck hidden.
+    setTimeout(showAll, 1200);
   } else {
-    reveal.forEach((el) => el.classList.add('in'));
+    showAll();
   }
 
   /* ---- Copy buttons: any [data-copy] copies the referenced element's text ---- */
