@@ -55,9 +55,11 @@ function corsHeaders(request) {
 }
 
 function json(data, status = 200, extraHeaders = {}) {
+  // Edge API responses are dynamic (live pricing, health, x402 config) — never
+  // let Cloudflare or a client cache them, so a redeploy is reflected instantly.
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'content-type': 'application/json', ...extraHeaders },
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extraHeaders },
   });
 }
 
