@@ -210,6 +210,26 @@
     "priority": 0.7
   },
   {
+    "slug": "account-backup",
+    "title": "Account Backup & Data Export",
+    "description": "Browser console scripts for exporting your X/Twitter account data without an API key.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/account-backup",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "account-tools",
+    "title": "Account Tools (Miscellaneous)",
+    "description": "Browser console scripts for account utility tasks on X/Twitter.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/account-tools",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "algorithm-cultivation",
     "title": "Algorithm Cultivation & Thought Leadership",
     "description": "Train your X/Twitter algorithm for a specific niche. Three approaches:",
@@ -236,6 +256,16 @@
     "section": "Agent Skills",
     "icon": "🎯",
     "urlPath": "/docs/skills/articles-longform",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "billing-management",
+    "title": "Billing Management",
+    "description": "Stripe-powered subscription and billing management for XActions.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/billing-management",
     "outSubdir": "skills",
     "priority": 0.7
   },
@@ -290,6 +320,16 @@
     "priority": 0.7
   },
   {
+    "slug": "community-notes",
+    "title": "Community Notes",
+    "description": "Browser console script for interacting with X's Community Notes fact-checking system.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/community-notes",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "competitor-intelligence",
     "title": "Competitor Intelligence",
     "description": "MCP-powered workflow plus browser scripts for analyzing competitor X/Twitter accounts.",
@@ -340,6 +380,26 @@
     "priority": 0.7
   },
   {
+    "slug": "crm-management",
+    "title": "CRM Management",
+    "description": "API-powered CRM system for managing relationships with your X followers and contacts.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/crm-management",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "delegate-access",
+    "title": "Delegate Access Management",
+    "description": "Browser console script for managing who can post on behalf of your X account.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/delegate-access",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "direct-messages",
     "title": "Direct Messages",
     "description": "Browser console scripts for sending, managing, and exporting X/Twitter DMs.",
@@ -376,6 +436,16 @@
     "section": "Agent Skills",
     "icon": "🎯",
     "urlPath": "/docs/skills/follower-monitoring",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "graph-analysis",
+    "title": "Graph Analysis",
+    "description": "API-powered network graph analysis for X/Twitter follower relationships.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/graph-analysis",
     "outSubdir": "skills",
     "priority": 0.7
   },
@@ -420,12 +490,32 @@
     "priority": 0.7
   },
   {
+    "slug": "media-studio",
+    "title": "Media Studio",
+    "description": "Browser console scripts for X's Media Studio (`studio.x.com`).",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/media-studio",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "notifications-management",
     "title": "Notifications Management",
     "description": "Browser console script for managing and filtering X/Twitter notifications.",
     "section": "Agent Skills",
     "icon": "🎯",
     "urlPath": "/docs/skills/notifications-management",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "post-editing",
+    "title": "Post Editing & Undo",
+    "description": "Browser console script for editing existing posts or undoing a recently posted tweet.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/post-editing",
     "outSubdir": "skills",
     "priority": 0.7
   },
@@ -450,6 +540,16 @@
     "priority": 0.7
   },
   {
+    "slug": "saved-searches",
+    "title": "Saved Searches",
+    "description": "Browser console scripts for managing saved searches on X/Twitter.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/saved-searches",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "settings-privacy",
     "title": "Settings & Privacy",
     "description": "Browser console scripts for managing X/Twitter account settings and privacy controls.",
@@ -466,6 +566,36 @@
     "section": "Agent Skills",
     "icon": "🎯",
     "urlPath": "/docs/skills/spaces-live",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "teams-management",
+    "title": "Teams Management",
+    "description": "API-powered team management for collaborative XActions usage.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/teams-management",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "timeline-viewing",
+    "title": "Timeline Viewing & Scraping",
+    "description": "Browser console scripts for viewing, switching, and collecting posts from your X timeline.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/timeline-viewing",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "topic-management",
+    "title": "Topic Management",
+    "description": "Browser console script for managing X Topics — the interest categories that personalize your timeline.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/topic-management",
     "outSubdir": "skills",
     "priority": 0.7
   },
@@ -490,12 +620,52 @@
     "priority": 0.7
   },
   {
+    "slug": "video-downloading",
+    "title": "Video Downloading",
+    "description": "Download videos and GIFs from X/Twitter posts — no API key needed.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/video-downloading",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
     "slug": "viral-thread-generation",
     "title": "Viral Thread Generation",
     "description": "MCP-powered workflow for researching trends, analyzing successful threads, and generating high-engagement thread content.",
     "section": "Agent Skills",
     "icon": "🎯",
     "urlPath": "/docs/skills/viral-thread-generation",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "webhooks",
+    "title": "Webhooks",
+    "description": "API-powered webhook system for receiving real-time event notifications from XActions.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/webhooks",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "x-pro-management",
+    "title": "X Pro (TweetDeck) Management",
+    "description": "Browser console scripts for navigating and configuring X Pro (formerly TweetDeck).",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/x-pro-management",
+    "outSubdir": "skills",
+    "priority": 0.7
+  },
+  {
+    "slug": "x402-payments",
+    "title": "x402 Payments",
+    "description": "XActions supports the x402 payment protocol — an HTTP-native micropayment standard for pay-per-use API access with cryptocurrency.",
+    "section": "Agent Skills",
+    "icon": "🎯",
+    "urlPath": "/docs/skills/x402-payments",
     "outSubdir": "skills",
     "priority": 0.7
   },
@@ -830,9 +1000,19 @@
     "priority": 0.7
   },
   {
+    "slug": "23-autonomous-space-agent",
+    "title": "Tutorial: Autonomous AI Voice Agent in X Spaces with Claude",
+    "description": "You are my X/Twitter Spaces voice agent expert. I want to use XActions to deploy AI agents that can autonomously join live X Spaces, listen to conversations, and speak with real-time voice AI. Help me set up, configure, and run Space agents.",
+    "section": "Claude Tutorials",
+    "icon": "🤖",
+    "urlPath": "/docs/tutorials/23-autonomous-space-agent",
+    "outSubdir": "tutorials",
+    "priority": 0.7
+  },
+  {
     "slug": "readme",
     "title": "XActions Claude Tutorial Prompts",
-    "description": "22 ready-to-paste prompt files that turn Claude into your personal X/Twitter automation expert. Each file is a complete, self-contained tutorial covering one feature area of [XActions](https://github.com/nirholas/XActions).",
+    "description": "23 ready-to-paste prompt files that turn Claude into your personal X/Twitter automation expert. Each file is a complete, self-contained tutorial covering one feature area of [XActions](https://github.com/nirholas/XActions).",
     "section": "Claude Tutorials",
     "icon": "🤖",
     "urlPath": "/docs/tutorials/readme",

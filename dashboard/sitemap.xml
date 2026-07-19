@@ -1099,6 +1099,18 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/account-backup</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/account-tools</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/algorithm-cultivation</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
@@ -1141,6 +1153,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/billing-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/blocking-muting-management</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
@@ -1172,6 +1190,12 @@
   </url>
   <url>
     <loc>https://xactions.app/docs/skills/community-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/community-notes</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1213,6 +1237,18 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/crm-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/delegate-access</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/direct-messages</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
@@ -1232,6 +1268,12 @@
   </url>
   <url>
     <loc>https://xactions.app/docs/skills/follower-monitoring</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/graph-analysis</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1267,7 +1309,19 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/media-studio</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/notifications-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/post-editing</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1285,6 +1339,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/saved-searches</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/settings-privacy</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
@@ -1292,6 +1352,24 @@
   </url>
   <url>
     <loc>https://xactions.app/docs/skills/spaces-live</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/teams-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/timeline-viewing</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/topic-management</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1321,7 +1399,31 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/skills/video-downloading</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/skills/viral-thread-generation</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/webhooks</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/x-pro-management</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/docs/skills/x402-payments</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -1627,6 +1729,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://xactions.app/docs/tutorials/23-autonomous-space-agent</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://xactions.app/docs/tutorials/readme</loc>
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
@@ -1721,6 +1829,12 @@
     <lastmod>2026-07-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://xactions.app/extension</loc>
+    <lastmod>2026-07-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://xactions.app/faq</loc>

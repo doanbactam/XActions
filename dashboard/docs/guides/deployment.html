@@ -53,12 +53,112 @@
   }
   </script>
 
-  <link rel="stylesheet" href="/css/common.css">
-  <link rel="stylesheet" href="/css/docs.css">
+  <style>
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #16181c;
+      --bg-tertiary: #202327;
+      --accent: #1d9bf0;
+      --accent-hover: #1a8cd8;
+      --accent-light: rgba(29, 155, 240, 0.1);
+      --text-primary: #e7e9ea;
+      --text-secondary: #71767b;
+      --border: #2f3336;
+      --success: #00ba7c;
+      --warning: #ffad1f;
+      --error: #f4212e;
+      --purple: #a855f7;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .layout { display: flex; max-width: 1300px; margin: 0 auto; min-height: 100vh; }
+    .sidebar { width: 275px; padding: 0 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    .logo { padding: 12px; }
+    .logo a { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); font-size: 1.5rem; font-weight: 800; padding: 12px; border-radius: 9999px; transition: background .2s; }
+    .logo a:hover { background: var(--accent-light); }
+    nav { flex: 1; }
+    .nav-item { display: flex; align-items: center; gap: 20px; padding: 12px; border-radius: 9999px; font-size: 1.25rem; color: var(--text-primary); text-decoration: none; transition: background .2s; margin-bottom: 4px; }
+    .nav-item:hover { background: var(--bg-tertiary); }
+    .nav-item.active { font-weight: 700; }
+    .nav-icon { font-size: 1.5rem; width: 28px; text-align: center; }
+    .action-btn { width: 90%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: 9999px; font-size: 1.0625rem; font-weight: 700; cursor: pointer; transition: background .2s; margin: 16px 0; text-decoration: none; display: block; text-align: center; }
+    .action-btn:hover { background: var(--accent-hover); }
+    .main-content { flex: 1; max-width: 800px; border-right: 1px solid var(--border); }
+    .main-header { position: sticky; top: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 16px 20px; z-index: 100; }
+    .main-header h1 { font-size: 1.25rem; font-weight: 700; }
+    .breadcrumb { font-size: 0.8125rem; color: var(--text-secondary); margin-top: 4px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .article { padding: 24px 20px; }
+    .article h1 { font-size: 1.75rem; font-weight: 800; margin-bottom: 8px; line-height: 1.2; }
+    .article h2 { font-size: 1.375rem; font-weight: 700; margin: 32px 0 12px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .article h3 { font-size: 1.125rem; font-weight: 600; margin: 24px 0 8px; color: var(--accent); }
+    .article h4 { font-size: 1rem; font-weight: 600; margin: 16px 0 8px; }
+    .article p { color: var(--text-secondary); font-size: 0.9375rem; margin-bottom: 16px; }
+    .article ul, .article ol { margin-left: 24px; margin-bottom: 16px; }
+    .article li { color: var(--text-secondary); font-size: 0.9375rem; margin-bottom: 6px; }
+    .article a { color: var(--accent); text-decoration: none; }
+    .article a:hover { text-decoration: underline; }
+    .article strong { color: var(--text-primary); }
+    .article blockquote { border-left: 3px solid var(--accent); padding: 12px 16px; margin: 16px 0; background: var(--bg-secondary); border-radius: 0 8px 8px 0; }
+    .article blockquote p { margin: 0; color: var(--text-secondary); font-style: italic; }
+    .article code { background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-family: 'Monaco','Menlo','Consolas', monospace; font-size: 0.875rem; color: var(--accent); }
+    .article pre { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow: auto; max-height: 520px; margin: 16px 0; }
+    .article pre code { background: none; padding: 0; color: var(--text-primary); font-size: 0.8125rem; display: block; }
+    .article table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.875rem; }
+    .article th { background: var(--bg-secondary); padding: 10px 12px; text-align: left; border: 1px solid var(--border); font-weight: 600; }
+    .article td { padding: 10px 12px; border: 1px solid var(--border); color: var(--text-secondary); }
+    .article hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    .article img { max-width: 100%; border-radius: 12px; }
+    .cat-badge { display: inline-block; background: var(--accent-light); color: var(--accent); padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-bottom: 16px; }
+    .cta-box { background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary)); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin: 32px 0; text-align: center; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 8px; color: var(--text-primary); }
+    .cta-box p { color: var(--text-secondary); margin-bottom: 16px; }
+    .cta-box a { display: inline-block; padding: 12px 24px; background: var(--accent); color: #fff; border-radius: 9999px; text-decoration: none; font-weight: 700; transition: background .2s; }
+    .cta-box a:hover { background: var(--accent-hover); }
+    .sidebar-right { width: 350px; padding: 16px 24px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sidebar-card { background: var(--bg-secondary); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .sidebar-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .sidebar-card a { display: block; color: var(--text-secondary); text-decoration: none; font-size: 0.875rem; padding: 6px 0; border-bottom: 1px solid var(--border); transition: color .2s; }
+    .sidebar-card a:last-child { border-bottom: none; }
+    .sidebar-card a:hover { color: var(--accent); }
+    .site-footer { border-top: 1px solid var(--border); padding: 32px 24px; }
+    .footer-content { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 24px; }
+    .footer-section h4 { font-size: 0.875rem; font-weight: 700; margin-bottom: 8px; }
+    .footer-section p, .footer-section a { color: var(--text-secondary); font-size: 0.8125rem; text-decoration: none; display: block; padding: 3px 0; }
+    .footer-section a:hover { color: var(--accent); }
+    .footer-bottom { max-width: 1200px; margin: 16px auto 0; padding-top: 16px; border-top: 1px solid var(--border); text-align: center; color: var(--text-secondary); font-size: 0.75rem; }
+    @media (max-width: 1024px) { .sidebar-right { display: none; } }
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; }
+      .sidebar { display: none; }
+      .main-content { max-width: 100%; border-right: none; }
+      .article pre { font-size: 0.75rem; }
+      .footer-content { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
   <div class="layout">
-    <aside class="sidebar-left" aria-label="Main navigation"></aside>
+    <aside class="sidebar">
+      <div class="logo"><a href="/">⚡ XActions</a></div>
+      <nav>
+        <a href="/features" class="nav-item"><span class="nav-icon">⚡</span><span>All Scripts</span></a>
+        <a href="/tutorials" class="nav-item"><span class="nav-icon">📚</span><span>Tutorials</span></a>
+        <a href="/docs" class="nav-item active"><span class="nav-icon">📖</span><span>Documentation</span></a>
+        <a href="/ai" class="nav-item"><span class="nav-icon">🤖</span><span>AI/MCP</span></a>
+        <a href="/pricing" class="nav-item"><span class="nav-icon">💰</span><span>Pricing</span></a>
+        <a href="/about" class="nav-item"><span class="nav-icon">ℹ️</span><span>About</span></a>
+        <a href="https://github.com/nirholas/XActions" class="nav-item" target="_blank" rel="noopener"><span class="nav-icon">⭐</span><span>GitHub</span></a>
+      </nav>
+      <a href="/dashboard" class="action-btn">Open Dashboard</a>
+    </aside>
 
     <main class="main-content">
       <header class="main-header">
@@ -95,7 +195,7 @@
 <td>Node.js 20+, Chromium, Postgres, Redis</td>
 </tr>
 </tbody></table>
-<p>You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Pages + Railway).</p>
+<p>You can deploy them together (Docker, Fly.io, Railway) or split them across services (Cloudflare Workers for the site and edge API + Railway for the optional reads/analytics backend). X account actions run in the <a href="https://xactions.app/extension">browser extension</a>, not on any backend.</p>
 <h2>Platform Comparison</h2>
 <table>
 <thead>
@@ -108,11 +208,18 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><strong>Cloudflare Pages</strong></td>
+<td><strong>Cloudflare Pages/Workers</strong></td>
 <td>✅</td>
-<td>❌</td>
-<td>Unlimited bandwidth</td>
+<td>Edge API + proxy</td>
+<td>100k req/day</td>
 <td><code>wrangler.toml</code></td>
+</tr>
+<tr>
+<td><strong>Google Cloud Run</strong></td>
+<td>❌</td>
+<td>✅</td>
+<td>Pay-per-use, no idle cost</td>
+<td><code>deploy/gcp/cloudbuild-api.yaml</code></td>
 </tr>
 <tr>
 <td><strong>Vercel</strong></td>
@@ -157,36 +264,70 @@
 <td><code>docker-compose.coolify.yml</code></td>
 </tr>
 </tbody></table>
-<p><strong>Recommended combo:</strong> Cloudflare Pages (frontend) + Railway (backend)</p>
+<p><strong>Recommended combo (what xactions.app runs today):</strong> Cloudflare Pages (static site + dashboard) + Google Cloud Run (<code>xactions-api</code>, backed by Cloud SQL Postgres and a shared Memorystore Redis instance). Railway, Fly, and Render remain fully supported for self-hosters who prefer them.</p>
 <hr>
-<h2>Cloudflare Pages (Frontend)</h2>
-<p>Free: unlimited requests, 500 builds/month, global edge CDN.</p>
-<h3>Option A: GitHub Integration (Recommended)</h3>
-<ol>
-<li>Go to <a href="https://dash.cloudflare.com/">Cloudflare Dashboard</a> → Pages</li>
-<li>Create a project → Connect GitHub → Select <code>nirholas/XActions</code></li>
-<li>Build configuration:<ul>
-<li><strong>Build command:</strong> (leave empty)</li>
-<li><strong>Build output directory:</strong> <code>dashboard</code></li>
-</ul>
-</li>
-<li>Deploy</li>
-</ol>
-<h3>Option B: CLI</h3>
-<pre><code class="language-bash">npm install -g wrangler
-wrangler login
-wrangler pages deploy dashboard --project-name=xactions
+<h2>Cloudflare Workers (Full Site + Edge API)</h2>
+<p>xactions.app runs on a single Cloudflare Worker. It serves the entire public<br>surface (landing page, dashboard, docs, blog, static assets) from Workers<br>static assets, and handles the dynamic surface natively.</p>
+<h3>The hosted model</h3>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Where it runs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>All pages, docs, blog, assets</td>
+<td>Workers static assets (global CDN)</td>
+</tr>
+<tr>
+<td><code>/api/health</code>, <code>/api/ai/health</code>, <code>/api/ai/pricing</code></td>
+<td>Worker, at the edge</td>
+</tr>
+<tr>
+<td><code>/openapi.json</code>, <code>/.well-known/x402</code></td>
+<td>Worker, at the edge</td>
+</tr>
+<tr>
+<td><code>/api/ai/*</code> x402 payment gate (paid <strong>reads</strong>: scrape, analytics)</td>
+<td>Worker, at the edge → <code>API_ORIGIN</code></td>
+</tr>
+<tr>
+<td><strong>X account actions</strong> (follow, unfollow, like, reply, post)</td>
+<td><strong>The <a href="https://xactions.app/extension">browser extension</a></strong></td>
+</tr>
+<tr>
+<td>Other <code>/api/*</code> (auth, user, analytics)</td>
+<td>Proxied to <code>API_ORIGIN</code> when set</td>
+</tr>
+</tbody></table>
+<p><strong>Account actions are never executed server-side by the hosted service.</strong><br>Follow/unfollow/like/reply need your logged-in X session; running them from a<br>server would mean custodying your session token and driving your account from a<br>datacenter IP (an account-safety and X-ToS problem). Those routes return <code>501</code><br>with a pointer to the extension, which performs them locally in your own<br>browser session. Self-hosters who want server-side execution can still run the<br>full Node backend (below) and set <code>API_ORIGIN</code>.</p>
+<h3>Deploy</h3>
+<pre><code class="language-bash">npx wrangler login          # once
+npm run deploy:cloudflare   # builds dist-cloudflare/ and deploys the Worker
 </code></pre>
-<h3>Option C: GitHub Actions (Automatic)</h3>
-<p>Set these GitHub secrets:</p>
-<ul>
-<li><code>CLOUDFLARE_API_TOKEN</code> — <a href="https://dash.cloudflare.com/profile/api-tokens">Create token</a> with &quot;Cloudflare Pages: Edit&quot; permission</li>
-<li><code>CLOUDFLARE_ACCOUNT_ID</code> — Found in Cloudflare dashboard sidebar</li>
-</ul>
-<p>Deploys automatically on push to <code>main</code> when <code>dashboard/</code> changes.</p>
+<p><code>npm run build:cloudflare</code> assembles <code>dist-cloudflare/</code> from <code>site/</code>,<br><code>dashboard/</code>, <code>public/</code>, and the <code>llms*.txt</code> files, mirroring the old<br><code>vercel.json</code> route table with plain file placement.</p>
+<h3>Connect a backend (optional)</h3>
+<p>Reads (server-side scraping, analytics) and account features can run on the<br>full Node backend. Deploy it to Google Cloud Run (below, what production<br>uses), Railway, Fly, or Docker, then point the Worker/Pages proxy at it:</p>
+<pre><code class="language-bash">npx wrangler deploy --var API_ORIGIN:https://your-api.example.com
+</code></pre>
+<p>or set <code>API_ORIGIN</code> in <code>wrangler.toml</code>. On Cloudflare Pages, the same wiring<br>is a <code>dashboard/_redirects</code> rule (<code>/api/* https://your-api.example.com/api/:splat 200</code>).<br>Until it is set, those routes return a 503 explaining exactly this, and<br>everything else keeps working.</p>
 <h3>Custom Domain</h3>
-<pre><code class="language-bash">wrangler pages project list
-# In Cloudflare dashboard: Pages → xactions → Custom domains → Add
+<p>Cloudflare dashboard → Workers &amp; Pages → <code>xactions</code> → Settings → Domains &amp;<br>Routes → Add → <code>xactions.app</code>. If the DNS zone is already on Cloudflare this is<br>one step; TLS is automatic. (Delete any leftover apex A/CNAME record pointing<br>at a previous host first, or the attach is refused.)</p>
+<hr>
+<h2>Google Cloud Run (Backend, current production)</h2>
+<p>xactions.app&#39;s <code>/api/*</code> traffic is proxied to a Cloud Run service named<br><code>xactions-api</code>, backed by a dedicated Cloud SQL Postgres instance and a<br>Memorystore Redis instance shared with other services on the same GCP<br>project (Bull queue keys are namespaced with a <code>xactions</code> prefix so they<br>never collide — see <code>api/services/jobQueue.js</code>).</p>
+<h3>One-time setup</h3>
+<pre><code class="language-bash">gcloud auth login   # once per machine — needs a browser
+bash deploy/gcp/provision-api.sh
+</code></pre>
+<p>This creates the Cloud SQL instance, Secret Manager entries<br>(<code>xactions-database-url</code>, <code>xactions-jwt-secret</code>, <code>xactions-session-secret</code>,<br><code>xactions-admin-api-key</code>), the required IAM bindings, then builds and deploys<br>the image via Cloud Build. It prints the Cloud Run URL and the command to map<br><code>api.xactions.app</code> to it.</p>
+<h3>Redeploy after a code change</h3>
+<pre><code class="language-bash">gcloud builds submit --config deploy/gcp/cloudbuild-api.yaml \
+  --region us-central1 --project aerial-vehicle-466722-p5
+</code></pre>
+<h3>Health check</h3>
+<pre><code class="language-bash">curl https://api.xactions.app/api/health
 </code></pre>
 <hr>
 <h2>Railway (Backend)</h2>
@@ -564,6 +705,5 @@ curl https://your-api-url/api/health
       <p>© 2024-2026 XActions. MIT License. No API fees. No limits.</p>
     </div>
   </footer>
-<script src="/js/sidebar.js"></script>
 </body>
 </html>
