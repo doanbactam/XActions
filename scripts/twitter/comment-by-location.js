@@ -227,43 +227,50 @@
   };
 
   const processTweets = async (stats) => {
-    const processedTweets = getProcessedTweets();
+    // A Set that we also update locally on every mark, not just a one-time
+    // snapshot: tweets stay in the DOM across scrolls, so a stale snapshot
+    // would cause the same tweet to be re-processed/re-commented on every
+    // outer iteration instead of being skipped as already handled
+    const processedTweets = new Set(getProcessedTweets());
     let scrollAttempts = 0;
     const maxScrollAttempts = 30;
     let noNewTweetsCount = 0;
-    
+
     while (stats.commented < CONFIG.maxComments && scrollAttempts < maxScrollAttempts) {
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       let foundNew = false;
-      
+
       for (const tweet of tweets) {
         if (stats.commented >= CONFIG.maxComments) break;
-        
+
         const tweetId = getTweetId(tweet);
-        if (!tweetId || processedTweets.includes(tweetId)) continue;
-        
+        if (!tweetId || processedTweets.has(tweetId)) continue;
+
         foundNew = true;
-        
+
         // Skip retweets if configured
         if (CONFIG.skipRetweets && isRetweet(tweet)) {
           log(`⏭️ Skipping retweet`, 'warn');
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           continue;
         }
-        
+
         // Check tweet age
         if (!isTweetRecent(tweet)) {
           log(`⏭️ Skipping old tweet`, 'warn');
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           continue;
         }
-        
+
         // Skip certain usernames
         const usernameEl = tweet.querySelector('[data-testid="User-Name"] a');
         const username = usernameEl?.href?.split('/').pop();
         if (CONFIG.skipUsernames.includes(username)) {
           log(`⏭️ Skipping @${username}`, 'warn');
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           continue;
         }
         
@@ -282,10 +289,12 @@
         if (success) {
           stats.commented++;
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           log(`✅ Comment ${stats.commented}/${CONFIG.maxComments} posted!`, 'success');
         } else {
           stats.failed++;
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
         }
         
         await randomDelay();

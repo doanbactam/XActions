@@ -190,18 +190,21 @@
     if (!(await searchHashtag(hashtag))) return false;
     await sleep(2000);
 
-    const processedTweets = getProcessedTweets();
+    // A Set that we also update locally on every mark, not just a one-time
+    // snapshot: tweets stay in the DOM across scrolls, so a stale snapshot
+    // would cause the same tweet to be re-commented on every outer iteration
+    const processedTweets = new Set(getProcessedTweets());
     let scrollAttempts = 0;
     const maxScrollAttempts = 20;
-    
+
     while (stats.commented < CONFIG.maxComments && scrollAttempts < maxScrollAttempts) {
       const tweets = document.querySelectorAll(SELECTORS.tweet);
-      
+
       for (const tweet of tweets) {
         if (stats.commented >= CONFIG.maxComments) break;
-        
+
         const tweetId = getTweetId(tweet);
-        if (!tweetId || processedTweets.includes(tweetId)) continue;
+        if (!tweetId || processedTweets.has(tweetId)) continue;
         
         // Get tweet text
         const textEl = tweet.querySelector(SELECTORS.tweetText);
@@ -233,6 +236,7 @@
         if (success) {
           stats.commented++;
           markTweetProcessed(tweetId);
+          processedTweets.add(tweetId);
           log(`✅ Comment ${stats.commented}/${CONFIG.maxComments} posted!`, 'success');
         } else {
           stats.failed++;

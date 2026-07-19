@@ -92,36 +92,6 @@ const CONFIG = {
   let totalRemoved = 0;
   let retries = 0;
   
-  // Method 1: Try direct bookmark buttons on tweets
-  const removeViaBookmarkBtn = async () => {
-    // Look for filled bookmark icons (indicating bookmarked)
-    const tweets = document.querySelectorAll($tweet);
-    
-    for (const tweet of tweets) {
-      if (CONFIG.maxRemove > 0 && totalRemoved >= CONFIG.maxRemove) {
-        return true; // Limit reached
-      }
-      
-      // Look for bookmark button that indicates "already bookmarked"
-      const bookmarkBtn = tweet.querySelector($removeBookmarkBtn) || 
-                          tweet.querySelector('[aria-label*="Remove"]');
-      
-      if (bookmarkBtn) {
-        try {
-          bookmarkBtn.click();
-          totalRemoved++;
-          console.log(`🗑️ Removed bookmark ${totalRemoved}${CONFIG.maxRemove > 0 ? '/' + CONFIG.maxRemove : ''}`);
-          await sleep(CONFIG.removeDelay);
-          return false; // Continue
-        } catch (e) {
-          console.warn('⚠️ Error removing bookmark:', e.message);
-        }
-      }
-    }
-    
-    return null; // No bookmarks found
-  };
-  
   // Method 2: Use the share menu
   const removeViaMenu = async (tweet) => {
     const moreBtn = tweet.querySelector($moreBtn);

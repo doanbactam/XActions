@@ -100,8 +100,10 @@ const CONFIG = {
       if (seenIds.has(tweetId)) return null;
       seenIds.add(tweetId);
       
-      // Get author
-      const authorLink = tweet.querySelector('a[href^="/"][role="link"]');
+      // Get author (User-Name block is the real author; a bare first link in
+      // the article can belong to a reposter's socialContext or a quoted tweet)
+      const authorLink = tweet.querySelector('[data-testid="User-Name"] a[href^="/"]') ||
+                         tweet.querySelector('a[href^="/"][role="link"]');
       const authorUsername = authorLink ? authorLink.getAttribute('href').replace('/', '').split('/')[0] : 'unknown';
       
       // Get display name
