@@ -62,6 +62,14 @@ const CONFIG = {
     window.location.href = url;
   };
 
+  // Stop switch: run window.stopMassBlock() from the console to abort after
+  // the account currently being processed.
+  let stopped = false;
+  window.stopMassBlock = () => {
+    stopped = true;
+    console.log('🛑 Stop requested. Finishing the current account, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  🚫 XActions — Mass Block                                    ║
@@ -69,6 +77,7 @@ const CONFIG = {
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked             ║' : '║  🔴 LIVE MODE - Accounts WILL be blocked                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
+  console.log('💡 To stop early: window.stopMassBlock()\n');
 
   if (CONFIG.usersToBlock.length === 0) {
     console.log('❌ No users to block! Edit CONFIG.usersToBlock and add usernames.');
@@ -98,6 +107,10 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be blocked      
   };
 
   for (const username of CONFIG.usersToBlock) {
+    if (stopped) {
+      console.log('🛑 Stopped by user.');
+      break;
+    }
     console.log(`\n⏳ Processing @${username}...`);
 
     try {

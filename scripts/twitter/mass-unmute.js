@@ -57,6 +57,14 @@ const CONFIG = {
 (async function massUnmute() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // Stop switch: run window.stopMassUnmute() from the console to abort
+  // after the account currently being processed.
+  let stopped = false;
+  window.stopMassUnmute = () => {
+    stopped = true;
+    console.log('🛑 Stop requested. Finishing the current account, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  🔊 XActions — Mass Unmute                                   ║
@@ -64,6 +72,7 @@ const CONFIG = {
 ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted             ║' : '║  🔴 LIVE MODE - Accounts WILL be unmuted                    ║'}
 ╚══════════════════════════════════════════════════════════════╝
   `);
+  console.log('💡 To stop early: window.stopMassUnmute()\n');
 
   // Check if on muted accounts page
   if (!window.location.href.includes('/settings/muted')) {
@@ -148,14 +157,39 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted      
   let unmuted = 0;
   const unmutedUsers = [];
 
+  // Unmuting a row on this page removes it from the (virtualized) muted
+  // list, so a cell reference captured during the initial scan can go stale
+  // after the first successful unmute. Re-resolve the live cell for the
+  // username before interacting with it, falling back to the cached one.
+  const findUserCell = (username) => {
+    for (const cell of document.querySelectorAll($userCell)) {
+      const link = cell.querySelector('a[href^="/"]');
+      const cellUsername = link?.getAttribute('href')?.replace('/', '')?.split('/')[0];
+      if (cellUsername === username) return cell;
+    }
+    return null;
+  };
+
   for (const [username, data] of toUnmute) {
+    if (stopped) {
+      console.log('🛑 Stopped by user.');
+      break;
+    }
+
     try {
-      data.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const element = findUserCell(username) || data.element;
+
+      if (!document.body.contains(element)) {
+        console.log(`❌ @${username} is no longer in the list (already unmuted or off-screen). Skipping.`);
+        continue;
+      }
+
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       await sleep(300);
 
       // Find unmute button in the cell
-      const unmuteBtn = data.element.querySelector('[data-testid$="-unmute"], button[aria-label*="Unmute"]');
-      
+      const unmuteBtn = element.querySelector('[data-testid$="-unmute"], button[aria-label*="Unmute"]');
+
       if (unmuteBtn) {
         unmuteBtn.click();
         await sleep(300);
@@ -164,7 +198,7 @@ ${CONFIG.dryRun ? '║  ⚠️  DRY RUN MODE - No accounts will be unmuted      
         console.log(`✅ Unmuted @${username}`);
       } else {
         // Try via the more menu
-        const moreBtn = data.element.querySelector('[data-testid="userActions"]');
+        const moreBtn = element.querySelector('[data-testid="userActions"]');
         if (moreBtn) {
           moreBtn.click();
           await sleep(300);

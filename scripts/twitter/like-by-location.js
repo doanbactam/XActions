@@ -125,6 +125,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByLocation() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByLocation = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  📍 LIKE BY LOCATION - XActions                          ║
@@ -136,6 +144,7 @@
   log.info(`Location: ${CONFIG.location}`);
   log.info(`Radius: ${CONFIG.radiusMiles} miles`);
   log.info(`Max likes: ${CONFIG.maxLikes}`);
+  log.info(`To stop early: window.stopLikeByLocation()`);
 
   // Build the search query
   const buildSearchQuery = () => {
@@ -219,12 +228,12 @@
     let scrollAttempts = 0;
     let noNewTweetsCount = 0;
 
-    while (stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
+    while (!stopped && stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       let foundNewTweet = false;
 
       for (const tweet of tweets) {
-        if (stats.liked >= CONFIG.maxLikes) break;
+        if (stopped || stats.liked >= CONFIG.maxLikes) break;
 
         const tweetId = getTweetIdentifier(tweet);
         

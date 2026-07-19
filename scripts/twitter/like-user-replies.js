@@ -35,10 +35,7 @@
     
     // Only like replies from verified users
     onlyVerified: false,
-    
-    // Skip replies from accounts with fewer followers than this
-    minFollowers: 0,
-    
+
     // Only like replies with images/videos
     onlyWithMedia: false,
     
@@ -115,6 +112,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeUserReplies() from the console to abort
+  // the loop after the reply currently being processed.
+  let stopped = false;
+  window.stopLikeUserReplies = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current reply, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  💬 LIKE USER REPLIES - XActions                         ║
@@ -140,6 +145,7 @@
   log.info(`Tweet ID: ${tweetId}`);
   log.info(`Max likes: ${CONFIG.maxLikes}`);
   log.info(`Skip original tweet: ${CONFIG.skipOriginalTweet}`);
+  log.info(`To stop early: window.stopLikeUserReplies()`);
 
   const isVerified = (tweet) => {
     return tweet.querySelector(SELECTORS.verifiedBadge) !== null;
@@ -221,13 +227,13 @@
   // Initial scroll to load replies
   await sleep(2000);
 
-  while (stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
+  while (!stopped && stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
     const tweets = document.querySelectorAll(SELECTORS.tweet);
     let foundNewReply = false;
     let tweetIndex = 0;
 
     for (const tweet of tweets) {
-      if (stats.liked >= CONFIG.maxLikes) break;
+      if (stopped || stats.liked >= CONFIG.maxLikes) break;
 
       const replyId = getReplyIdentifier(tweet);
       

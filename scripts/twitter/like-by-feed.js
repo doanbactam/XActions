@@ -106,6 +106,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByFeed() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByFeed = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  🏠 LIKE BY FEED - XActions                              ║
@@ -126,6 +134,7 @@
   log.info(`Skip replies: ${CONFIG.skipReplies}`);
   log.info(`Skip ads: ${CONFIG.skipAds}`);
   log.info(`Skip retweets: ${CONFIG.skipRetweets}`);
+  log.info(`To stop early: window.stopLikeByFeed()`);
 
   let scrollAttempts = 0;
   let noNewTweetsCount = 0;
@@ -176,12 +185,12 @@
     return text.substring(0, 100);
   };
 
-  while (stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
+  while (!stopped && stats.liked < CONFIG.maxLikes && scrollAttempts < CONFIG.maxScrollAttempts) {
     const tweets = document.querySelectorAll(SELECTORS.tweet);
     let foundNewTweet = false;
 
     for (const tweet of tweets) {
-      if (stats.liked >= CONFIG.maxLikes) break;
+      if (stopped || stats.liked >= CONFIG.maxLikes) break;
 
       const tweetId = getTweetIdentifier(tweet);
       

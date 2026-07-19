@@ -114,6 +114,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByHashtag() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByHashtag = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  🏷️  LIKE BY HASHTAG - XActions                          ║
@@ -125,21 +133,22 @@
   log.info(`Starting hashtag liker for: #${CONFIG.hashtags.join(', #')}`);
   log.info(`Max likes per hashtag: ${CONFIG.maxLikesPerHashtag}`);
   log.info(`Max total likes: ${CONFIG.maxTotalLikes}`);
+  log.info(`To stop early: window.stopLikeByHashtag()`);
 
   const likeTweetsOnPage = async (hashtag) => {
     let hashtagLikes = 0;
     let scrollAttempts = 0;
     let noNewTweetsCount = 0;
 
-    while (hashtagLikes < CONFIG.maxLikesPerHashtag && 
-           stats.totalLiked < CONFIG.maxTotalLikes && 
+    while (!stopped && hashtagLikes < CONFIG.maxLikesPerHashtag &&
+           stats.totalLiked < CONFIG.maxTotalLikes &&
            scrollAttempts < CONFIG.maxScrollAttempts) {
-      
+
       const tweets = document.querySelectorAll(SELECTORS.tweet);
       let foundNewTweet = false;
 
       for (const tweet of tweets) {
-        if (hashtagLikes >= CONFIG.maxLikesPerHashtag || stats.totalLiked >= CONFIG.maxTotalLikes) {
+        if (stopped || hashtagLikes >= CONFIG.maxLikesPerHashtag || stats.totalLiked >= CONFIG.maxTotalLikes) {
           break;
         }
 
@@ -239,6 +248,7 @@
 
   // Process each hashtag
   for (const hashtag of CONFIG.hashtags) {
+    if (stopped) break;
     if (stats.totalLiked >= CONFIG.maxTotalLikes) {
       log.warning('Reached maximum total likes limit');
       break;

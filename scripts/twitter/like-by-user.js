@@ -69,7 +69,6 @@
     tweetText: '[data-testid="tweetText"]',
     retweetIndicator: '[data-testid="socialContext"]',
     tweetMedia: '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="videoComponent"]',
-    quoteTweet: '[data-testid="tweet"] [data-testid="tweet"]',
     userAvatar: '[data-testid="Tweet-User-Avatar"]',
     likeCount: '[data-testid="like"] span, [data-testid="unlike"] span',
     retweetCount: '[data-testid="retweet"] span'
@@ -129,6 +128,14 @@
 
   const processedTweets = new Set();
 
+  // Stop switch: run window.stopLikeByUser() from the console to abort
+  // the loop after the tweet currently being processed.
+  let stopped = false;
+  window.stopLikeByUser = () => {
+    stopped = true;
+    log.warning('Stop requested. Finishing the current tweet, then exiting.');
+  };
+
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║  👤 LIKE BY USER - XActions                              ║
@@ -153,6 +160,7 @@
   log.info(`Max likes: ${CONFIG.maxLikes}`);
   log.info(`Skip replies: ${CONFIG.skipReplies}`);
   log.info(`Skip retweets: ${CONFIG.skipRetweets}`);
+  log.info(`To stop early: window.stopLikeByUser()`);
 
   const isReply = (tweet) => {
     // Structural marker first (locale-independent), then the English UI text
@@ -170,7 +178,11 @@
   };
 
   const isQuoteTweet = (tweet) => {
-    return tweet.querySelector(SELECTORS.quoteTweet) !== null;
+    // A quote tweet embeds the quoted post as a card inside a
+    // div[role="link"] that itself contains a <time> element. The card does
+    // NOT carry a nested data-testid="tweet", so matching on that (as this
+    // used to) never found anything and skipQuoteTweets silently did nothing.
+    return tweet.querySelector('div[role="link"] time') !== null;
   };
 
   const hasMedia = (tweet) => {
@@ -209,15 +221,15 @@
   let noNewTweetsCount = 0;
   let consecutiveAlreadyLiked = 0;
 
-  while (stats.liked < CONFIG.maxLikes && 
+  while (!stopped && stats.liked < CONFIG.maxLikes &&
          scrollAttempts < CONFIG.maxScrollAttempts &&
          consecutiveAlreadyLiked < CONFIG.stopAfterAlreadyLiked) {
-    
+
     const tweets = document.querySelectorAll(SELECTORS.tweet);
     let foundNewTweet = false;
 
     for (const tweet of tweets) {
-      if (stats.liked >= CONFIG.maxLikes) break;
+      if (stopped || stats.liked >= CONFIG.maxLikes) break;
       if (consecutiveAlreadyLiked >= CONFIG.stopAfterAlreadyLiked) break;
 
       const tweetId = getTweetIdentifier(tweet);
