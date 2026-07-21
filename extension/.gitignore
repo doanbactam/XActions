@@ -1,0 +1,4 @@
+node_modules/
+dist/
+popup/popup.bundle.js
+popup/popup.bundle.css

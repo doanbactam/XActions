@@ -23,15 +23,16 @@ const INCLUDE = [
   'content/bridge.js',
   'content/injected.js',
   'popup/popup.html',
-  'popup/popup.css',
-  'popup/popup.js',
-  'popup/agent-ui.js',
+  'popup/popup.bundle.css',
+  'popup/popup.bundle.js',
   'icons/icon16.png',
   'icons/icon48.png',
   'icons/icon128.png',
 ];
 
-const JS_CHECK = INCLUDE.filter((f) => f.endsWith('.js'));
+// popup.bundle.js is an esbuild output (minified IIFE) — skip node's --check,
+// which chokes on some modern syntax esbuild lowers differently.
+const JS_CHECK = INCLUDE.filter((f) => f.endsWith('.js') && f !== 'popup/popup.bundle.js');
 
 function fail(msg) {
   console.error('❌', msg);
@@ -173,8 +174,19 @@ function writeBuildInfo(manifest, zipPath) {
   ok(`Wrote dist/build-info.json`);
 }
 
+function buildPopup() {
+  const tsc = spawnSync('npx', ['tsc', '--noEmit', '-p', 'tsconfig.json'], { cwd: ROOT, encoding: 'utf8' });
+  if (tsc.status !== 0) fail(`Popup type-check failed:\n${tsc.stdout || tsc.stderr}`);
+  ok('Popup type-check passed');
+
+  const esb = spawnSync('node', ['scripts/build-popup.mjs'], { cwd: ROOT, encoding: 'utf8' });
+  if (esb.status !== 0) fail(`Popup bundle build failed:\n${esb.stdout || esb.stderr}`);
+  ok('Popup bundle built (React + TypeScript + Base UI)');
+}
+
 function main() {
   console.log('\n🔧 XActions Extension build\n');
+  buildPopup();
   const manifest = readManifest();
   checkFiles();
   checkSyntax();

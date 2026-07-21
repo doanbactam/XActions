@@ -142,10 +142,17 @@ extension/
 │   ├── bridge.js                  Content script — message relay
 │   └── injected.js                Page-context script — 11 automation runners
 ├── popup/
-│   ├── popup.html                 Popup UI (834 lines)
-│   ├── popup.css                  Dark theme styles (1752 lines)
-│   ├── popup.js                   Popup controller (802 lines)
-│   └── agent-ui.js                AI Strategist UI wiring
+│   ├── popup.html                 Popup shell (mounts the React bundle)
+│   ├── popup.bundle.js            Built output — React + TypeScript + Base UI (esbuild)
+│   └── popup.bundle.css           Built output — gothic theme styles
+├── src/popup/                     React + TypeScript source (Base UI components, gothic theme)
+│   ├── App.tsx, index.tsx
+│   ├── components/                Header, tabs, automation cards, agent/strategist UI
+│   ├── data/automations.ts        Declarative automation catalog (cards + settings fields)
+│   ├── lib/                       chrome.runtime RPC, storage polling, agent hook
+│   └── styles/theme.css           Gothic design tokens (oxblood/brass on near-black)
+├── tsconfig.json                  TypeScript config for the popup source
+├── scripts/build-popup.mjs        esbuild bundler for the popup (run via build.cjs)
 ├── agent/
 │   ├── catalog.js                 Tool definitions (108 tools)
 │   ├── tools.js                   Tool executor / automation dispatcher
@@ -160,9 +167,9 @@ extension/
 ### Message Flow
 
 ```
-Popup  ──chrome.runtime──►  Background  ──chrome.tabs──►  Bridge  ──postMessage──►  Injected
-popup.js                    service-worker.js              bridge.js                 injected.js
-       ◄──chrome.runtime──              ◄──chrome.runtime──        ◄──postMessage──
+Popup            ──chrome.runtime──►  Background  ──chrome.tabs──►  Bridge  ──postMessage──►  Injected
+src/popup (React)                     service-worker.js              bridge.js                 injected.js
+                  ◄──chrome.runtime──              ◄──chrome.runtime──        ◄──postMessage──
 ```
 
 ## Detailed Docs
