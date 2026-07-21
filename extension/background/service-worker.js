@@ -21,6 +21,15 @@ const state = {
   agentBusy: false,
 };
 
+function getState() {
+  return {
+    activeAutomations: state.activeAutomations,
+    totalActions: state.totalActions,
+    globalPaused: state.globalPaused,
+    agentBusy: state.agentBusy,
+  };
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================

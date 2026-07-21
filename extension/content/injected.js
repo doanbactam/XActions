@@ -59,8 +59,6 @@
       if (CONFIG.DEBUG || type === 'error') {
         console.log(`${prefix} [${timestamp}] ${message}`);
       }
-      // Emit to extension
-      notify('ACTION_PERFORMED', { action: `[${type}] ${message}` });
     };
 
     const scrollToBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
