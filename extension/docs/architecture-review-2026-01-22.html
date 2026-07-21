@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XActions Extension — Architecture Review</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  .badge-strong { background: #dc2626; color: white; }
+  .badge-explore { background: #f59e0b; color: white; }
+  .badge-speculative { background: #6b7280; color: white; }
+  .before-box { border: 2px solid #ef4444; border-radius: 8px; padding: 16px; background: #fef2f2; }
+  .after-box { border: 2px solid #22c55e; border-radius: 8px; padding: 16px; background: #f0fdf4; }
+  .module-box { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin: 4px 0; font-size: 13px; }
+  .shallow { border-color: #ef4444; background: #fee2e2; }
+  .deep { border-color: #22c55e; background: #dcfce7; }
+  .seam-arrow { color: #6b7280; font-size: 20px; text-align: center; margin: 4px 0; }
+  .friction-tag { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .file-ref { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; color: #4b5563; }
+  .callout { border-left: 4px solid; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .callout-warn { border-color: #f59e0b; background: #fffbeb; }
+  .callout-info { border-color: #3b82f6; background: #eff6ff; }
+  .mass-bar { height: 24px; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 11px; font-weight: 600; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<div class="max-w-6xl mx-auto px-6 py-10">
+
+<!-- Header -->
+<header class="mb-12">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-800 to-amber-600 flex items-center justify-center text-white font-bold text-lg">XA</div>
+    <h1 class="text-3xl font-bold text-slate-900">Architecture Review — XActions Extension</h1>
+  </div>
+  <p class="text-slate-500 ml-13">Deepening candidates · 22 Jan 2026 · Extension v1.4.0</p>
+  <div class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 text-sm text-slate-700">
+    <strong>Vocabulary:</strong> This report uses the <em>codebase-design</em> glossary — <strong>module</strong>, <strong>interface</strong>, <strong>depth</strong>, <strong>seam</strong>, <strong>adapter</strong>, <strong>leverage</strong>, <strong>locality</strong>. No <code>CONTEXT.md</code> or ADRs exist yet for the extension; domain terms are inferred from code.
+  </div>
+</header>
+
+<!-- Hot spots summary -->
+<section class="mb-10">
+  <h2 class="text-xl font-bold mb-4 text-slate-900">Hot spots from recent commits</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="p-4 bg-white rounded-lg border border-slate-200">
+      <div class="text-sm font-semibold text-red-600 mb-1">UI layer</div>
+      <div class="text-xs text-slate-500">popup redesign, dashboard page, Auto tab removal — 4 commits</div>
+      <div class="mt-2 text-xs space-y-1">
+        <div class="file-ref">src/popup/lib/useAgent.ts · 265 lines</div>
+        <div class="file-ref">src/dashboard/App.tsx · 85 lines</div>
+        <div class="file-ref">background/service-worker.js · 1230 lines</div>
+      </div>
+    </div>
+    <div class="p-4 bg-white rounded-lg border border-slate-200">
+      <div class="text-sm font-semibold text-amber-600 mb-1">Agent pipeline</div>
+      <div class="text-xs text-slate-500">Strategist, OAuth, real-time traces — 3 commits</div>
+      <div class="mt-2 text-xs space-y-1">
+        <div class="file-ref">agent/strategist.js · 744 lines</div>
+        <div class="file-ref">agent/tools.js · 532 lines</div>
+        <div class="file-ref">agent/xai-oauth.js · 340 lines</div>
+      </div>
+    </div>
+    <div class="p-4 bg-white rounded-lg border border-slate-200">
+      <div class="text-sm font-semibold text-slate-600 mb-1">Content bridge</div>
+      <div class="text-xs text-slate-500">Page tool execution, automations — stable</div>
+      <div class="mt-2 text-xs space-y-1">
+        <div class="file-ref">content/injected.js · 2255 lines</div>
+        <div class="file-ref">content/bridge.js · 178 lines</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mass diagram -->
+<section class="mb-12">
+  <h2 class="text-xl font-bold mb-4 text-slate-900">Code mass by module</h2>
+  <div class="space-y-2">
+    <div class="mass-bar" style="width: 100%; background: #1e293b;">content/injected.js — 2255 lines</div>
+    <div class="mass-bar" style="width: 54%; background: #334155;">background/service-worker.js — 1230 lines</div>
+    <div class="mass-bar" style="width: 33%; background: #475569;">agent/strategist.js — 744 lines</div>
+    <div class="mass-bar" style="width: 23%; background: #64748b;">agent/tools.js — 532 lines</div>
+    <div class="mass-bar" style="width: 15%; background: #94a3b8;">agent/xai-oauth.js — 340 lines</div>
+    <div class="mass-bar" style="width: 12%; background: #cbd5e1; color: #1e293b;">src/popup/lib/useAgent.ts — 265 lines</div>
+    <div class="mass-bar" style="width: 8%; background: #e2e8f0; color: #1e293b;">content/bridge.js — 178 lines</div>
+    <div class="mass-bar" style="width: 7%; background: #f1f5f9; color: #1e293b;">agent/agent-core.js — 163 lines</div>
+    <div class="mass-bar" style="width: 3%; background: #f8fafc; color: #1e293b;">src/popup/lib/useExtensionState.ts — 69 lines</div>
+    <div class="mass-bar" style="width: 1%; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1;">rpc.ts — 8 lines</div>
+  </div>
+  <p class="text-xs text-slate-400 mt-2">Two monoliths (injected.js, service-worker.js) hold 60% of the codebase's mass. The UI hooks are mid-weight. rpc.ts is a speck.</p>
+</section>
+
+<!-- Candidate 1: Message Contract -->
+<section class="mb-10 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Candidate 1: Message Contract Module</h2>
+      <p class="text-sm text-slate-500 mt-1">26+ string-typed messages scattered across 5 files — no single source of truth</p>
+    </div>
+    <span class="badge-strong px-3 py-1 rounded-full text-xs font-bold">Strong</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Files</h3>
+      <ul class="text-sm space-y-1 text-slate-600">
+        <li class="file-ref">background/service-worker.js (26 types, switch statement)</li>
+        <li class="file-ref">src/popup/lib/useAgent.ts (14 types, inline)</li>
+        <li class="file-ref">src/popup/App.tsx (3 types, inline)</li>
+        <li class="file-ref">content/bridge.js (13 types, two switches)</li>
+        <li class="file-ref">content/injected.js (6 types, inline)</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Problem</h3>
+      <p class="text-sm text-slate-600">
+        The popup, dashboard, service worker, bridge, and injected script all communicate via <code>chrome.runtime.sendMessage</code> and <code>window.postMessage</code> with string <code>type</code> fields. There is no module that owns this contract. Each file hardcodes its own string literals. A typo in one file produces a silent <code>{ error: 'Unknown message type' }</code> at runtime — no compile-time check, no autocomplete, no documentation of the full protocol.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        Understanding "what messages can the UI send?" requires reading all 5 files and cross-referencing. This is zero <strong>locality</strong> — the knowledge is smeared across the entire codebase.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="before-box">
+      <h4 class="font-bold text-red-700 mb-3 text-sm">BEFORE — No module, string soup</h4>
+      <div class="space-y-2">
+        <div class="module-box shallow">
+          <strong>useAgent.ts</strong><br>
+          <span class="text-xs">sendMessage({ type: 'AGENT_GET_CONFIG' })<br>sendMessage({ type: 'XAI_OAUTH_START' })<br>sendMessage({ type: 'AGENT_RUN_STRATEGY' })<br>...14 string literals</span>
+        </div>
+        <div class="module-box shallow">
+          <strong>service-worker.js</strong><br>
+          <span class="text-xs">case 'AGENT_GET_CONFIG': ...<br>case 'XAI_OAUTH_START': ...<br>...26 string literals</span>
+        </div>
+        <div class="module-box shallow">
+          <strong>bridge.js</strong><br>
+          <span class="text-xs">case 'RUN_AUTOMATION': ...<br>case 'AGENT_TOOL': ...<br>...13 string literals</span>
+        </div>
+      </div>
+      <p class="text-xs text-red-600 mt-3">No single interface. A rename means find-and-replace across 5 files. A new message means updating 3+ files by hand.</p>
+    </div>
+    <div class="after-box">
+      <h4 class="font-bold text-green-700 mb-3 text-sm">AFTER — Deep MessageContract module</h4>
+      <div class="module-box deep">
+        <strong>MessageContract</strong> (small interface)<br>
+        <span class="text-xs">// one file, one source of truth<br>type Msg = { type: 'AGENT_GET_CONFIG' } | ...<br>type Resp = { success: boolean, ... } | ...<br>send(msg: Msg): Promise&lt;Resp&gt;<br>handle(handler: (msg) =&gt; Resp)</span>
+      </div>
+      <div class="seam-arrow">↓ leverage ↓</div>
+      <div class="space-y-2">
+        <div class="module-box">
+          <strong>useAgent.ts</strong><br>
+          <span class="text-xs">send({ type: 'AGENT_GET_CONFIG' }) // typed</span>
+        </div>
+        <div class="module-box">
+          <strong>service-worker.js</strong><br>
+          <span class="text-xs">handle(msg =&gt; match(msg)) // exhaustive</span>
+        </div>
+        <div class="module-box">
+          <strong>bridge.js</strong><br>
+          <span class="text-xs">forward(msg) // typed relay</span>
+        </div>
+      </div>
+      <p class="text-xs text-green-600 mt-3">One interface, one source of truth. TypeScript exhaustive checks catch missing handlers. Tests exercise the contract directly.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Solution</h3>
+      <p class="text-sm text-slate-600">
+        Create a single <strong>MessageContract</strong> module — a TypeScript file that defines the discriminated union of all message types and their response shapes. The module exposes two functions: <code>send(msg)</code> for callers and <code>handle(dispatcher)</code> for the service worker. The bridge gets a <code>forward(msg)</code> that relays typed messages across the content-script seam.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The service worker's 26-case switch becomes an exhaustive match — TypeScript flags any unhandled case at compile time. The popup and dashboard import the same types, so a rename is a single-file change.
+      </p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Benefits</h3>
+      <ul class="text-sm space-y-2 text-slate-600">
+        <li><strong>Locality:</strong> The message protocol lives in one file. Adding, renaming, or removing a message is a single edit — no cross-file find-and-replace.</li>
+        <li><strong>Leverage:</strong> All 5 consumers (popup, dashboard, SW, bridge, injected) get typed send/receive for free. No more silent typos.</li>
+        <li><strong>Testability:</strong> The contract is the test surface — write a test that sends each message type and asserts the response shape. No Chrome APIs needed for contract tests.</li>
+        <li><strong>Deletion test:</strong> Delete the module → 26 string literals reappear across 5 files, each independently typed. Complexity concentrates. The module earns its keep.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>Note:</strong> This candidate does not require an ADR — no existing decision contradicts it. It's pure addition.
+  </div>
+</section>
+
+<!-- Candidate 2: Service Worker Decomposition -->
+<section class="mb-10 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Candidate 2: Service Worker Decomposition</h2>
+      <p class="text-sm text-slate-500 mt-1">1230-line monolith mixing 6 concerns behind one giant switch</p>
+    </div>
+    <span class="badge-strong px-3 py-1 rounded-full text-xs font-bold">Strong</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Files</h3>
+      <ul class="text-sm space-y-1 text-slate-600">
+        <li class="file-ref">background/service-worker.js — 1230 lines, 1 file</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Problem</h3>
+      <p class="text-sm text-slate-600">
+        The service worker is the codebase's largest module and its <strong>interface is the entire switch statement</strong> — 26 cases spanning 6 unrelated concerns: agent orchestration, OAuth flow, automation lifecycle, tab navigation, state sync, and rate-limit detection. Understanding "how does OAuth work?" requires scrolling past automation lifecycle code. Understanding "how does <code>runPageTool</code> retry?" requires reading through 40 lines of navigation logic embedded in the same file.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The module is not shallow — it's the opposite: too much implementation behind one unstructured interface. But the <strong>seam is wrong</strong>. There's one seam (the message listener) for 6 independent subsystems. Each subsystem's bugs, tests, and changes are forced to co-locate with 5 unrelated subsystems.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="before-box">
+      <h4 class="font-bold text-red-700 mb-3 text-sm">BEFORE — One monolith, one seam</h4>
+      <div class="module-box shallow" style="height: 200px; overflow: hidden;">
+        <strong>service-worker.js (1230 lines)</strong><br>
+        <span class="text-xs">
+          ┌─ handleMessage (26 cases) ─┐<br>
+          │  Agent orchestration        │<br>
+          │  OAuth flow                 │<br>
+          │  Automation lifecycle       │<br>
+          │  Tab navigation             │<br>
+          │  State sync + badge         │<br>
+          │  Rate limit detection       │<br>
+          │  Context menus              │<br>
+          │  Alarms health check        │<br>
+          └─────────────────────────────┘<br>
+          <br>
+          All concerns share one file,<br>
+          one state object, one closure.
+        </span>
+      </div>
+      <p class="text-xs text-red-600 mt-3">Changing OAuth means touching the same file as automation lifecycle. No concern can be tested in isolation.</p>
+    </div>
+    <div class="after-box">
+      <h4 class="font-bold text-green-700 mb-3 text-sm">AFTER — Sub-modules behind thin router</h4>
+      <div class="module-box deep" style="padding: 6px;">
+        <strong>service-worker.js (router)</strong><br>
+        <span class="text-xs">handleMessage → dispatch to sub-modules</span>
+      </div>
+      <div class="seam-arrow">↓ seams ↓</div>
+      <div class="space-y-1">
+        <div class="module-box"><span class="text-xs"><strong>AgentOrchestrator</strong> — runChat, runStrategy, executePlaybook</span></div>
+        <div class="module-box"><span class="text-xs"><strong>OauthFlow</strong> — start, poll, pending, logout, panel</span></div>
+        <div class="module-box"><span class="text-xs"><strong>AutomationLifecycle</strong> — start, stop, stopAll, pause, resume</span></div>
+        <div class="module-box"><span class="text-xs"><strong>TabNav</strong> — ensureXTab, navigateXTab, runPageTool</span></div>
+        <div class="module-box"><span class="text-xs"><strong>StateStore</strong> — syncState, badge, logActivity</span></div>
+      </div>
+      <p class="text-xs text-green-600 mt-3">Each sub-module owns its concern. Tests target one sub-module. The router is ~30 lines.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Solution</h3>
+      <p class="text-sm text-slate-600">
+        Keep the service worker as a thin message router (~30 lines) that dispatches to sub-modules. Each sub-module is a plain JS file with a small interface: <code>AgentOrchestrator</code> (chat, strategy, playbook execution), <code>OauthFlow</code> (device login lifecycle), <code>AutomationLifecycle</code> (start/stop/pause), <code>TabNav</code> (ensureXTab, navigate, page tool relay), <code>StateStore</code> (state sync, badge, activity log).
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The sub-modules share a <code>ctx</code> object (the current <code>state</code> + Chrome APIs) passed by the router — no globalThis, no implicit coupling. Each can be tested by passing a fake <code>ctx</code>.
+      </p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Benefits</h3>
+      <ul class="text-sm space-y-2 text-slate-600">
+        <li><strong>Locality:</strong> OAuth bugs live in <code>oauth-flow.js</code>. Automation bugs live in <code>automation-lifecycle.js</code>. No more scrolling past 800 lines of unrelated code.</li>
+        <li><strong>Leverage:</strong> Each sub-module's interface is small (3-5 functions). The router just dispatches — adding a new concern means adding a new sub-module, not growing the switch.</li>
+        <li><strong>Testability:</strong> Each sub-module accepts a <code>ctx</code> with Chrome APIs injected. Tests pass a fake <code>ctx</code> — no Chrome environment needed.</li>
+        <li><strong>Deletion test:</strong> Delete the router → 26 cases collapse back into one file. Delete a sub-module → its concern's complexity reappears in the router. Both earn their keep.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-warn">
+    <strong>Constraint:</strong> MV3 service workers are loaded via <code>importScripts()</code> — sub-modules must use that pattern, not ES module imports. This is a Chrome platform constraint, not an architectural choice.
+  </div>
+</section>
+
+<!-- Candidate 3: Storage Schema -->
+<section class="mb-10 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Candidate 3: Storage Schema Module</h2>
+      <p class="text-sm text-slate-500 mt-1">15+ chrome.storage.local keys scattered, no schema, no validation, no migration</p>
+    </div>
+    <span class="badge-explore px-3 py-1 rounded-full text-xs font-bold">Worth exploring</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Files</h3>
+      <ul class="text-sm space-y-1 text-slate-600">
+        <li class="file-ref">background/service-worker.js — 6 keys (automations, activityLog, globalPaused, totalActions, firstRun, rateLimited)</li>
+        <li class="file-ref">agent/strategist.js — 4 keys (agentPlaybook, agentAccountAnalysis, agentStrategyProgress, agentStrategyLastResult)</li>
+        <li class="file-ref">agent/xai-oauth.js — 2 keys (xaiOauth, xaiOauthPending)</li>
+        <li class="file-ref">agent/tools.js — 2 keys (agentChatHistory, agentSafety)</li>
+        <li class="file-ref">src/popup/lib/useExtensionState.ts — reads 3 keys</li>
+        <li class="file-ref">service-worker.js — dynamic keys (settings_{automationId})</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Problem</h3>
+      <p class="text-sm text-slate-600">
+        <code>chrome.storage.local</code> is the shared state layer between the service worker, popup, dashboard, and agent modules. But there is no module that owns the storage schema. Each file calls <code>chrome.storage.local.get('someKey')</code> with a hardcoded string. If <code>strategist.js</code> renames <code>agentPlaybook</code> to <code>playbook</code>, the popup silently breaks — no compile error, no runtime warning, just empty state.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The popup's <code>useExtensionState</code> polls 3 keys; the service worker syncs 3 different keys; the agent modules each own 2-4 keys. There's no map of the full storage layout. A new developer has to grep for <code>chrome.storage.local</code> across 8 files to understand what's persisted.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="before-box">
+      <h4 class="font-bold text-red-700 mb-3 text-sm">BEFORE — No owner, strings everywhere</h4>
+      <div class="space-y-2">
+        <div class="module-box shallow">
+          <strong>strategist.js</strong><br>
+          <span class="text-xs">chrome.storage.local.get('agentPlaybook')<br>chrome.storage.local.set({ agentPlaybook: ... })</span>
+        </div>
+        <div class="module-box shallow">
+          <strong>service-worker.js</strong><br>
+          <span class="text-xs">chrome.storage.local.get(['automations', 'activityLog'])<br>chrome.storage.local.set({ automations: ... })</span>
+        </div>
+        <div class="module-box shallow">
+          <strong>xai-oauth.js</strong><br>
+          <span class="text-xs">chrome.storage.local.get('xaiOauth')<br>chrome.storage.local.set({ xaiOauthPending: ... })</span>
+        </div>
+      </div>
+      <p class="text-xs text-red-600 mt-3">15+ string keys, no types, no validation. A typo = silent empty state.</p>
+    </div>
+    <div class="after-box">
+      <h4 class="font-bold text-green-700 mb-3 text-sm">AFTER — Deep Store module</h4>
+      <div class="module-box deep">
+        <strong>Store</strong> (small interface)<br>
+        <span class="text-xs">get&lt;T&gt;(key: StorageKey): Promise&lt;T&gt;<br>set&lt;T&gt;(key: StorageKey, val: T): Promise&lt;void&gt;<br>// StorageKey = 'agent.playbook' | 'agent.config' | ...<br>// typed, validated, namespaced</span>
+      </div>
+      <div class="seam-arrow">↓ leverage ↓</div>
+      <div class="space-y-2">
+        <div class="module-box"><span class="text-xs"><strong>strategist.js</strong>: Store.get('agent.playbook')</span></div>
+        <div class="module-box"><span class="text-xs"><strong>service-worker.js</strong>: Store.set('automation.state', ...)</span></div>
+        <div class="module-box"><span class="text-xs"><strong>xai-oauth.js</strong>: Store.get('oauth.tokens')</span></div>
+      </div>
+      <p class="text-xs text-green-600 mt-3">One typed interface. Renames are safe. Tests inject a fake Store.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Solution</h3>
+      <p class="text-sm text-slate-600">
+        Create a <strong>Store</strong> module that owns the full storage schema. It defines a <code>StorageKey</code> type (a union of all valid keys, namespaced like <code>'agent.playbook'</code>, <code>'oauth.tokens'</code>), and exposes typed <code>get</code> / <code>set</code> / <code>remove</code> functions. All <code>chrome.storage.local</code> calls go through this module.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The module can also handle migrations (versioned schema) and defaults (return a default if key is missing). The popup's <code>useExtensionState</code> becomes <code>Store.subscribe('automation.state', callback)</code> — one typed subscription instead of polling 3 raw keys.
+      </p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Benefits</h3>
+      <ul class="text-sm space-y-2 text-slate-600">
+        <li><strong>Locality:</strong> The storage schema lives in one file. Adding a new key, renaming, or migrating is a single edit.</li>
+        <li><strong>Leverage:</strong> All 8 consumers get typed access. No more <code>chrome.storage.local.get('agentPlaybook')</code> with a string that might be wrong.</li>
+        <li><strong>Testability:</strong> Tests inject a fake <code>Store</code> (in-memory Map). No Chrome APIs needed.</li>
+        <li><strong>Deletion test:</strong> Delete the module → 15+ string keys reappear across 8 files. Complexity concentrates. The module earns its keep.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Candidate 4: Shared UI Library -->
+<section class="mb-10 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Candidate 4: Shared UI Library</h2>
+      <p class="text-sm text-slate-500 mt-1">Dashboard imports from popup/lib — cross-boundary dependency</p>
+    </div>
+    <span class="badge-explore px-3 py-1 rounded-full text-xs font-bold">Worth exploring</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Files</h3>
+      <ul class="text-sm space-y-1 text-slate-600">
+        <li class="file-ref">src/dashboard/App.tsx → imports from ../popup/lib/useAgent</li>
+        <li class="file-ref">src/dashboard/App.tsx → imports from ../popup/lib/useExtensionState</li>
+        <li class="file-ref">src/dashboard/components/ConfigSection.tsx → imports from ../../popup/lib/format</li>
+        <li class="file-ref">src/dashboard/components/ConfigSection.tsx → imports from ../../popup/lib/rpc</li>
+        <li class="file-ref">src/dashboard/components/PersonaSection.tsx → imports from ../../popup/lib/format</li>
+        <li class="file-ref">src/dashboard/components/ActivitySection.tsx → imports from ../../popup/lib/format</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Problem</h3>
+      <p class="text-sm text-slate-600">
+        The dashboard was added in the most recent commit and reuses the popup's hooks (<code>useAgent</code>, <code>useExtensionState</code>) and utilities (<code>format</code>, <code>rpc</code>) by importing from <code>../popup/lib/</code>. This creates a dependency where the dashboard's stability depends on the popup's internal file structure. If the popup is refactored (e.g. <code>useAgent</code> split into smaller hooks), the dashboard breaks.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        The <strong>seam is in the wrong place</strong>. <code>popup/lib/</code> is the popup's private implementation directory, but it's being used as a shared library. The popup and dashboard are sibling UIs — neither should own the other's dependencies.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="before-box">
+      <h4 class="font-bold text-red-700 mb-3 text-sm">BEFORE — Dashboard reaches into popup's internals</h4>
+      <div class="space-y-2">
+        <div class="module-box" style="border-color: #3b82f6;">
+          <strong>src/popup/lib/</strong><br>
+          <span class="text-xs">useAgent.ts · useExtensionState.ts · rpc.ts · format.ts</span>
+        </div>
+        <div class="seam-arrow">↑↑↑ dashboard reaches up ↑↑↑</div>
+        <div class="module-box" style="border-color: #8b5cf6;">
+          <strong>src/dashboard/</strong><br>
+          <span class="text-xs">App.tsx → ../popup/lib/useAgent<br>ConfigSection → ../../popup/lib/format</span>
+        </div>
+      </div>
+      <p class="text-xs text-red-600 mt-3">Dashboard depends on popup's internal structure. Popup refactor breaks dashboard.</p>
+    </div>
+    <div class="after-box">
+      <h4 class="font-bold text-green-700 mb-3 text-sm">AFTER — Shared lib at the right seam</h4>
+      <div class="space-y-2">
+        <div class="module-box deep" style="border-color: #22c55e;">
+          <strong>src/shared/lib/</strong><br>
+          <span class="text-xs">useAgent.ts · useExtensionState.ts · rpc.ts · format.ts · types.ts</span>
+        </div>
+        <div class="seam-arrow">↓ clean imports ↓</div>
+        <div class="flex gap-2">
+          <div class="module-box flex-1" style="border-color: #3b82f6;"><span class="text-xs"><strong>src/popup/</strong><br>imports from shared/lib</span></div>
+          <div class="module-box flex-1" style="border-color: #8b5cf6;"><span class="text-xs"><strong>src/dashboard/</strong><br>imports from shared/lib</span></div>
+        </div>
+      </div>
+      <p class="text-xs text-green-600 mt-3">Both UIs are siblings. Shared code lives at their common root.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Solution</h3>
+      <p class="text-sm text-slate-600">
+        Move <code>useAgent.ts</code>, <code>useExtensionState.ts</code>, <code>rpc.ts</code>, <code>format.ts</code>, and <code>types.ts</code> from <code>src/popup/lib/</code> to <code>src/shared/lib/</code>. Both popup and dashboard import from <code>../shared/lib/</code>. The popup's <code>components/</code> directory stays popup-specific; the dashboard's <code>components/</code> stays dashboard-specific.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        This is a pure file move — no logic changes. The <code>tsconfig.json</code> already includes all of <code>src/</code>, so no config changes needed. The esbuild entry points already resolve relative imports.
+      </p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Benefits</h3>
+      <ul class="text-sm space-y-2 text-slate-600">
+        <li><strong>Locality:</strong> Shared hooks and types live in a location that signals "shared" — not hidden inside the popup's directory.</li>
+        <li><strong>Leverage:</strong> A future third UI (e.g. sidepanel React rewrite) can import from <code>shared/lib/</code> without reaching into the popup.</li>
+        <li><strong>Testability:</strong> Shared hooks can be tested independently of either UI.</li>
+        <li><strong>Deletion test:</strong> Delete <code>shared/lib/</code> → the hooks must go somewhere. Putting them back in <code>popup/lib/</code> recreates the cross-boundary dependency. The shared location earns its keep.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Candidate 5: rpc.ts -->
+<section class="mb-10 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-900">Candidate 5: rpc.ts — Deepen or Delete</h2>
+      <p class="text-sm text-slate-500 mt-1">8-line pass-through wrapper — genuinely shallow</p>
+    </div>
+    <span class="badge-speculative px-3 py-1 rounded-full text-xs font-bold">Speculative</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Files</h3>
+      <ul class="text-sm space-y-1 text-slate-600">
+        <li class="file-ref">src/popup/lib/rpc.ts — 8 lines, 1 function</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Problem</h3>
+      <p class="text-sm text-slate-600">
+        <code>rpc.ts</code> is a 1-line wrapper around <code>chrome.runtime.sendMessage</code> with a generic type parameter. Its interface (one function, one parameter, one return) is nearly as complex as its implementation (one function call). The <strong>deletion test</strong> is clear: delete it, and each caller writes <code>chrome.runtime.sendMessage(msg) as Promise&lt;T&gt;</code> directly — complexity does not concentrate, it just moves.
+      </p>
+      <p class="text-sm text-slate-600 mt-2">
+        However, the module has <em>latent</em> depth potential. Right now it does nothing with errors, timeouts, or retries. The service worker can be asleep (MV3 lifecycle) and <code>sendMessage</code> can fail silently. A deeper <code>rpc.ts</code> could handle wake-up retries, timeout, and error normalization — all hidden behind the same <code>send()</code> interface.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="before-box">
+      <h4 class="font-bold text-red-700 mb-3 text-sm">BEFORE — Shallow pass-through</h4>
+      <div class="module-box shallow">
+        <strong>rpc.ts (8 lines)</strong><br>
+        <span class="text-xs">export async function sendMessage&lt;T&gt;(msg): Promise&lt;T&gt; {<br>&nbsp;&nbsp;return chrome.runtime.sendMessage(msg) as Promise&lt;T&gt;;<br>}</span>
+      </div>
+      <p class="text-xs text-red-600 mt-3">Interface ≈ implementation. No error handling, no timeout, no retry. If SW is asleep, silent failure.</p>
+    </div>
+    <div class="after-box">
+      <h4 class="font-bold text-green-700 mb-3 text-sm">AFTER (option A) — Deepened with retry + timeout</h4>
+      <div class="module-box deep">
+        <strong>rpc.ts (deep)</strong><br>
+        <span class="text-xs">export async function send&lt;T&gt;(msg): Promise&lt;T&gt; {<br>&nbsp;&nbsp;// 1. try sendMessage<br>&nbsp;&nbsp;// 2. on failure, wake SW via action<br>&nbsp;&nbsp;// 3. retry once<br>&nbsp;&nbsp;// 4. timeout after 10s<br>&nbsp;&nbsp;// 5. normalize error shape<br>}</span>
+      </div>
+      <p class="text-xs text-green-600 mt-3">Same interface to callers. 5 concerns hidden behind <code>send()</code>. Real depth.</p>
+      <div class="mt-3 pt-3 border-t border-green-200">
+        <h4 class="font-bold text-slate-600 mb-2 text-sm">AFTER (option B) — Delete</h4>
+        <p class="text-xs text-slate-500">Callers use <code>chrome.runtime.sendMessage(msg)</code> directly. The MessageContract module (Candidate 1) provides the typing. No wrapper needed.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Solution</h3>
+      <p class="text-sm text-slate-600">
+        <strong>Two options, pick one:</strong><br>
+        <strong>A) Deepen:</strong> Add MV3 wake-up retry, timeout, and error normalization. The interface stays <code>send(msg): Promise&lt;resp&gt;</code> but the implementation handles the real-world failure modes of Chrome's service worker lifecycle. This is the right call if the team has seen silent sendMessage failures.<br>
+        <strong>B) Delete:</strong> If Candidate 1 (MessageContract) is implemented, it provides typed <code>send()</code> directly. <code>rpc.ts</code> becomes redundant — delete it and let the MessageContract own the send function.
+      </p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-slate-700 mb-2">Benefits</h3>
+      <ul class="text-sm space-y-2 text-slate-600">
+        <li><strong>If deepened:</strong> Locality — all MV3 messaging failure modes handled in one place. Leverage — every caller gets retry + timeout for free.</li>
+        <li><strong>If deleted:</strong> One fewer file. The MessageContract absorbs the typing. Simpler is better if the failure modes aren't real.</li>
+        <li><strong>Deletion test (current):</strong> Delete now → complexity moves, doesn't concentrate. It's not earning its keep yet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>Recommendation:</strong> If Candidate 1 (MessageContract) is adopted, delete <code>rpc.ts</code> — the contract module absorbs its job. If Candidate 1 is not adopted, deepen <code>rpc.ts</code> to handle MV3 lifecycle failures.
+  </div>
+</section>
+
+<!-- Top Recommendation -->
+<section class="mb-10 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-8 text-white shadow-lg">
+  <h2 class="text-2xl font-bold mb-4">Top Recommendation</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="md:col-span-2">
+      <h3 class="text-xl font-semibold mb-3 text-amber-400">Start with Candidate 1: Message Contract Module</h3>
+      <p class="text-sm text-slate-300 mb-4">
+        The message contract is the seam between every part of the extension — UI ↔ background ↔ content script ↔ page. Right now that seam is 50+ string literals scattered across 5 files with no owner. Every other candidate touches this seam:
+      </p>
+      <ul class="text-sm space-y-2 text-slate-300 mb-4">
+        <li><strong>Candidate 2</strong> (SW decomposition) needs the contract to know which sub-module handles which message.</li>
+        <li><strong>Candidate 3</strong> (Storage schema) needs the contract for storage-related messages (<code>AGENT_GET_CONFIG</code>, <code>AGENT_SAVE_CONFIG</code>).</li>
+        <li><strong>Candidate 4</strong> (Shared lib) moves <code>rpc.ts</code> — which is the send half of the contract.</li>
+        <li><strong>Candidate 5</strong> (rpc.ts) is directly absorbed by the contract module.</li>
+      </ul>
+      <p class="text-sm text-slate-300">
+        The contract module is also the <strong>lowest-risk</strong> change: it's pure addition (a new TypeScript file), doesn't change runtime behavior, and can be adopted incrementally — one file at a time replaces string literals with typed calls. No big-bang refactor required.
+      </p>
+    </div>
+    <div class="bg-slate-700 rounded-lg p-4">
+      <h4 class="font-semibold text-amber-400 mb-2 text-sm">Why not SW decomposition first?</h4>
+      <p class="text-xs text-slate-300 mb-3">
+        The service worker split (Candidate 2) is higher impact but higher risk — it restructures 1230 lines of working code. Doing it without a typed message contract means the new sub-modules still use string literals, and a typo during the split produces a silent runtime bug.
+      </p>
+      <h4 class="font-semibold text-amber-400 mb-2 text-sm">Suggested order</h4>
+      <ol class="text-xs text-slate-300 space-y-1 list-decimal list-inside">
+        <li>Message Contract (Candidate 1)</li>
+        <li>Shared UI Library (Candidate 4) — trivial move</li>
+        <li>Storage Schema (Candidate 3)</li>
+        <li>SW Decomposition (Candidate 2)</li>
+        <li>rpc.ts (Candidate 5) — delete, absorbed by #1</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="text-center text-xs text-slate-400 py-6">
+  <p>Generated by architecture review · 22 Jan 2026 · XActions Extension v1.4.0</p>
+  <p class="mt-1">Uses <em>codebase-design</em> vocabulary: module, interface, depth, seam, adapter, leverage, locality</p>
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+</body>
+</html>
