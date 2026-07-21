@@ -24,8 +24,29 @@ export function useExtensionState() {
 
   React.useEffect(() => {
     refresh();
+    // Real-time update via storage.onChanged (no 1s polling lag)
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area !== 'local') return;
+      if (changes.automations) {
+        setAutomations(changes.automations.newValue || {});
+      }
+      if (changes.activityLog) {
+        setActivityLog(changes.activityLog.newValue || []);
+      }
+      if (changes.globalPaused) {
+        setGlobalPaused(!!changes.globalPaused.newValue);
+      }
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    // Fallback poll (1s) in case onChanged misses edge cases
     const id = setInterval(refresh, 1000);
-    return () => clearInterval(id);
+    return () => {
+      chrome.storage.onChanged.removeListener(onChanged);
+      clearInterval(id);
+    };
   }, [refresh]);
 
   const patchAutomation = React.useCallback((id: string, patch: Partial<AutomationsState[string]>) => {

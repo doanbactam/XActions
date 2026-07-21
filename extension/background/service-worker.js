@@ -422,6 +422,15 @@ async function runAgentChat(message) {
         },
       ].slice(-40);
       await chrome.storage.local.set({ agentChatHistory: nextHistory });
+      // Log each tool call in the trace
+      for (const t of result.toolTrace || []) {
+        await logActivity({
+          time: Date.now(),
+          type: t.error ? 'error' : 'complete',
+          automation: 'aiAgent',
+          message: `🛠 ${t.tool || 'tool'}${t.error ? ` — ${t.error}` : ''}`,
+        });
+      }
       await logActivity({
         time: Date.now(),
         type: 'action',
@@ -467,6 +476,19 @@ async function runAgentStrategy(message) {
         await chrome.storage.local.set({
           agentStrategyProgress: { ...ev, at: Date.now() },
         });
+        // Log each phase to activity log for the Activity tab
+        const phaseLabel = {
+          start: 'Bắt đầu phân tích',
+          gather: 'Thu thập tín hiệu',
+          synthesize: 'Grok chẩn đoán & lên kịch bản',
+          done: 'Kịch bản sẵn sàng',
+        }[ev.phase] || ev.phase;
+        await logActivity({
+          time: Date.now(),
+          type: ev.phase === 'done' ? 'complete' : 'action',
+          automation: 'aiAgent',
+          message: ev.label || phaseLabel,
+        });
       },
     });
 
@@ -495,8 +517,8 @@ async function runAgentStrategy(message) {
       await chrome.storage.local.set({ agentChatHistory: nextHistory });
       await logActivity({
         time: Date.now(),
-        type: 'action',
-        automation: 'strategist',
+        type: 'complete',
+        automation: 'aiAgent',
         message: `Strategist: playbook @${result.playbook?.account?.handle || '?'} · ${result.playbook?.playbook?.steps?.length || 0} steps`,
       });
       await notifyUser(
@@ -504,11 +526,23 @@ async function runAgentStrategy(message) {
         `@${result.playbook?.account?.handle || 'account'} · ${result.playbook?.playbook?.steps?.length || 0} bước — mở popup Agent để chạy`,
       );
     } else {
+      await logActivity({
+        time: Date.now(),
+        type: 'error',
+        automation: 'aiAgent',
+        message: `Phân tích lỗi: ${(result.error || 'failed').slice(0, 120)}`,
+      });
       await notifyUser('XActions · Phân tích lỗi', (result.error || 'failed').slice(0, 120));
     }
 
     return result;
   } catch (err) {
+    await logActivity({
+      time: Date.now(),
+      type: 'error',
+      automation: 'aiAgent',
+      message: `Phân tích lỗi: ${(err.message || String(err)).slice(0, 120)}`,
+    });
     await notifyUser('XActions · Phân tích lỗi', (err.message || String(err)).slice(0, 120));
     return { ok: false, error: err.message || String(err) };
   } finally {
@@ -559,20 +593,60 @@ async function runAgentExecutePlaybook(message) {
         await chrome.storage.local.set({
           agentStrategyProgress: { ...ev, at: Date.now() },
         });
+        // Log each playbook step to the activity log
+        if (ev.phase === 'execute' && ev.id) {
+          await logActivity({
+            time: Date.now(),
+            type: 'action',
+            automation: 'aiAgent',
+            message: `▶ ${ev.label || ev.id} · ${ev.tool || ''}`.trim(),
+          });
+        }
       },
     });
 
     if (result.ok) {
+      // Log per-step results (done/failed/skipped/blocked)
+      for (const r of result.results || []) {
+        if (r.status === 'done') {
+          await logActivity({
+            time: Date.now(),
+            type: 'complete',
+            automation: 'aiAgent',
+            message: `✅ ${r.id} · ${r.tool}`,
+          });
+        } else if (r.status === 'failed') {
+          await logActivity({
+            time: Date.now(),
+            type: 'error',
+            automation: 'aiAgent',
+            message: `❌ ${r.id} · ${r.tool} — ${r.result?.error || 'failed'}`,
+          });
+        } else if (r.skipped) {
+          await logActivity({
+            time: Date.now(),
+            type: 'action',
+            automation: 'aiAgent',
+            message: `⏭ ${r.id} · ${r.tool} — ${r.reason || r.status}`,
+          });
+        }
+      }
       await logActivity({
         time: Date.now(),
         type: 'action',
-        automation: 'strategist',
+        automation: 'aiAgent',
         message: `Execute playbook: ${result.summary}`,
       });
       await notifyUser('XActions · Đã chạy kịch bản', result.summary || 'done');
     }
     return result;
   } catch (err) {
+    await logActivity({
+      time: Date.now(),
+      type: 'error',
+      automation: 'aiAgent',
+      message: `Chạy kịch bản lỗi: ${(err.message || String(err)).slice(0, 120)}`,
+    });
     return { ok: false, error: err.message || String(err) };
   } finally {
     state.agentBusy = false;

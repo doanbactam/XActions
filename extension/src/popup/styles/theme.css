@@ -504,6 +504,28 @@ select.xa-input {
 /* ============================================ */
 /* ACTIVITY TAB */
 /* ============================================ */
+.xa-log-stats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; padding: 12px; background: var(--xa-bg-card); border: 1px solid var(--xa-border-soft); border-radius: var(--xa-radius-sm); }
+.xa-log-stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.xa-log-stat { text-align: center; }
+.xa-log-stat-value { font: 700 18px/1 ui-serif, Georgia, serif; color: var(--xa-ink-1); }
+.xa-log-stat-label { font-size: 9.5px; color: var(--xa-ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+.xa-log-chart { display: flex; flex-direction: column; gap: 4px; }
+.xa-log-chart-label { font-size: 10.5px; color: var(--xa-ink-2); font-weight: 600; }
+.xa-log-chart-bars { display: flex; align-items: flex-end; gap: 1px; height: 36px; }
+.xa-log-chart-bar { flex: 1; background: linear-gradient(to top, var(--xa-accent), var(--xa-accent-soft, #8b6d2f)); border-radius: 1px 1px 0 0; min-height: 2px; transition: height 0.2s; }
+.xa-log-chart-bar:hover { background: var(--xa-accent); }
+.xa-log-chart-axis { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--xa-ink-3); }
+
+.xa-log-breakdown { display: flex; flex-direction: column; gap: 4px; }
+.xa-log-breakdown-label { font-size: 10.5px; color: var(--xa-ink-2); font-weight: 600; margin-bottom: 2px; }
+.xa-log-breakdown-row { display: flex; align-items: center; gap: 8px; font-size: 10.5px; }
+.xa-log-breakdown-name { width: 80px; color: var(--xa-ink-2); flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xa-log-breakdown-bar { flex: 1; height: 6px; background: var(--xa-bg-soft); border-radius: 3px; overflow: hidden; }
+.xa-log-breakdown-fill { height: 100%; background: var(--xa-accent); border-radius: 3px; }
+.xa-log-breakdown-count { color: var(--xa-ink-1); font-weight: 600; flex-shrink: 0; min-width: 36px; text-align: right; }
+.xa-log-breakdown-err { color: var(--xa-danger, #f87171); font-size: 9.5px; }
+
 .xa-activity-header { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; font-weight: 650; color: var(--xa-ink-2); margin-bottom: 8px; }
 .xa-activity-controls { display: flex; align-items: center; gap: 6px; }
 .xa-activity-log { display: flex; flex-direction: column; gap: 4px; }
