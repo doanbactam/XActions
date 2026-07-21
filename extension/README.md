@@ -25,7 +25,7 @@ D:\Project\XActions\extension
 3. Mở **https://x.com** (đã login) → bấm icon **XA**
 4. Pill **Live** = connected; **Offline** = chưa tab x.com
 
-## AI Strategist (Grok) — **phân tích → kịch bản → chạy** (v1.3 hardened)
+## AI Strategist (Grok) — **phân tích → kịch bản → chạy** (v1.4.0)
 
 Tab **Agent** ưu tiên **Strategist**, không phải chat-first:
 
@@ -134,15 +134,25 @@ Full installation guide: [docs/extension.md](../docs/extension.md)
 ```
 extension/
 ├── manifest.json                  Manifest V3 configuration
+├── package.json                   Extension scripts (build / check)
+├── build.cjs                      Validate + package the extension zip
 ├── background/
 │   └── service-worker.js          State management, badge, context menus, rate limits
 ├── content/
 │   ├── bridge.js                  Content script — message relay
 │   └── injected.js                Page-context script — 11 automation runners
 ├── popup/
-│   ├── popup.html                 Popup UI (632 lines)
-│   ├── popup.css                  Dark theme styles (1086 lines)
-│   └── popup.js                   Popup controller (782 lines)
+│   ├── popup.html                 Popup UI (834 lines)
+│   ├── popup.css                  Dark theme styles (1752 lines)
+│   ├── popup.js                   Popup controller (802 lines)
+│   └── agent-ui.js                AI Strategist UI wiring
+├── agent/
+│   ├── catalog.js                 Tool definitions (108 tools)
+│   ├── tools.js                   Tool executor / automation dispatcher
+│   ├── agent-core.js              Agent turn loop with tool calling
+│   ├── llm.js                     LLM client (xAI, OpenRouter, OpenAI, Ollama)
+│   ├── xai-oauth.js               xAI OAuth device-code flow
+│   └── strategist.js              Analyze → playbook → execute pipeline
 └── icons/
     ├── icon16.png, icon48.png, icon128.png
 ```
@@ -168,12 +178,14 @@ popup.js                    service-worker.js              bridge.js            
 | Permission | Why |
 |---|---|
 | `activeTab` | Access the current X tab |
+| `tabs` | Find X tabs and send commands |
 | `storage` | Persist settings and activity log |
 | `alarms` | Periodic health checks |
 | `scripting` | Inject automation code |
 | `contextMenus` | Right-click: Download video, Unroll thread, Analyze account |
 | `notifications` | Rate limit alerts |
-| `host_permissions` | Only x.com and twitter.com |
+| `webRequest` | Detect HTTP 429 rate-limit responses from X |
+| `host_permissions` | x.com, twitter.com, plus LLM provider / OAuth / localhost endpoints |
 
 ## Credits
 
