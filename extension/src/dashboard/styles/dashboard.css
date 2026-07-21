@@ -1,0 +1,259 @@
+/* Dashboard-specific styles — extends popup theme.css */
+/* The popup theme provides all tokens (--xa-*) and base component styles. */
+
+:root {
+  --xa-dash-sidebar-w: 220px;
+  --xa-dash-max-w: 960px;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  overflow: auto;
+  background: var(--xa-bg);
+  color: var(--xa-ink);
+  font-family: var(--xa-font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+/* ---- Layout ---- */
+.xa-dash {
+  display: grid;
+  grid-template-columns: var(--xa-dash-sidebar-w) 1fr;
+  min-height: 100vh;
+}
+
+.xa-dash-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--xa-border);
+  background: rgba(8, 5, 5, 0.92);
+  backdrop-filter: blur(14px);
+  padding: 16px 0;
+  z-index: 10;
+}
+
+.xa-dash-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 16px;
+  border-bottom: 1px solid var(--xa-border-soft);
+  margin-bottom: 12px;
+}
+
+.xa-dash-brand-title {
+  font-family: var(--xa-font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.xa-dash-brand-sub {
+  font-size: 10px;
+  color: var(--xa-ink-3);
+}
+
+.xa-dash-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px;
+  flex: 1;
+}
+
+.xa-dash-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--xa-radius-sm);
+  border: none;
+  background: none;
+  color: var(--xa-ink-3);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.18s var(--xa-ease), color 0.18s var(--xa-ease);
+}
+
+.xa-dash-nav-item:hover { background: var(--xa-bg-hover); color: var(--xa-ink); }
+.xa-dash-nav-item.is-active { background: var(--xa-accent-soft); color: var(--xa-ink); border-left: 2px solid var(--xa-accent-2); }
+.xa-dash-nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.xa-dash-sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--xa-border-soft);
+  font-size: 10px;
+  color: var(--xa-ink-3);
+}
+
+/* ---- Main content ---- */
+.xa-dash-main {
+  padding: 28px 32px;
+  max-width: var(--xa-dash-max-w);
+  width: 100%;
+}
+
+.xa-dash-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.xa-dash-title {
+  font-family: var(--xa-font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.xa-dash-subtitle {
+  font-size: 12px;
+  color: var(--xa-ink-3);
+}
+
+/* ---- Cards / sections ---- */
+.xa-dash-card {
+  border: 1px solid var(--xa-border);
+  border-radius: var(--xa-radius);
+  background: var(--xa-bg-card);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.xa-dash-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--xa-ink);
+}
+
+.xa-dash-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.xa-dash-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+@media (max-width: 720px) {
+  .xa-dash { grid-template-columns: 1fr; }
+  .xa-dash-sidebar { position: relative; height: auto; flex-direction: row; align-items: center; padding: 8px; }
+  .xa-dash-nav { flex-direction: row; overflow-x: auto; }
+  .xa-dash-nav-item { white-space: nowrap; }
+  .xa-dash-brand { padding: 0 12px 0 0; border: none; margin: 0; }
+  .xa-dash-sidebar-footer { display: none; }
+  .xa-dash-main { padding: 16px; }
+  .xa-dash-grid-2, .xa-dash-grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ---- Form (dashboard uses wider fields) ---- */
+.xa-dash-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.xa-dash-field-label { font-size: 12px; font-weight: 600; color: var(--xa-ink-2); }
+.xa-dash-field-hint { font-size: 11px; color: var(--xa-ink-3); }
+
+.xa-dash-input {
+  background: var(--xa-bg-soft);
+  border: 1px solid var(--xa-border);
+  border-radius: var(--xa-radius-xs);
+  color: var(--xa-ink);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.18s var(--xa-ease), box-shadow 0.18s;
+}
+.xa-dash-input:focus { border-color: var(--xa-accent-2); box-shadow: 0 0 0 3px var(--xa-gold-soft); }
+
+textarea.xa-dash-input { resize: vertical; min-height: 80px; }
+
+/* ---- Stats (dashboard-sized) ---- */
+.xa-dash-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.xa-dash-stat-card { padding: 16px; border: 1px solid var(--xa-border); border-radius: var(--xa-radius-sm); background: var(--xa-bg-card); }
+.xa-dash-stat-value { font: 700 28px/1 ui-serif, Georgia, serif; color: var(--xa-ink); }
+.xa-dash-stat-label { font-size: 11px; color: var(--xa-ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+.xa-dash-chart-bars { display: flex; align-items: flex-end; gap: 2px; height: 80px; margin: 12px 0; }
+.xa-dash-chart-bar { flex: 1; background: linear-gradient(to top, var(--xa-accent), var(--xa-accent-soft, #8b6d2f)); border-radius: 2px 2px 0 0; min-height: 3px; transition: height 0.3s var(--xa-ease); }
+.xa-dash-chart-bar:hover { background: var(--xa-accent); }
+.xa-dash-chart-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--xa-ink-3); }
+
+/* ---- Log table ---- */
+.xa-dash-log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.xa-dash-log-table th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--xa-border); color: var(--xa-ink-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.xa-dash-log-table td { padding: 8px 10px; border-bottom: 1px solid var(--xa-border-soft); color: var(--xa-ink-2); }
+.xa-dash-log-table tr:hover td { background: var(--xa-bg-soft); }
+.xa-dash-log-type-error td { color: #e8a3ab; }
+.xa-dash-log-type-complete td { color: var(--xa-success); }
+
+/* ---- Playbook steps ---- */
+.xa-dash-step-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 120px 80px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--xa-border-soft);
+  border-radius: var(--xa-radius-xs);
+  margin-bottom: 6px;
+  background: var(--xa-bg-soft);
+}
+.xa-dash-step-row.is-done { border-color: rgba(95, 143, 90, 0.3); }
+.xa-dash-step-row.is-failed { border-color: rgba(181, 42, 56, 0.3); }
+.xa-dash-step-tool { font-size: 11px; color: var(--xa-accent-2); font-family: monospace; }
+.xa-dash-step-status { font-size: 12px; font-weight: 650; text-align: center; }
+
+/* ---- Persona editor ---- */
+.xa-dash-persona-preview {
+  background: var(--xa-bg-soft);
+  border: 1px solid var(--xa-border);
+  border-radius: var(--xa-radius-sm);
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xa-ink-2);
+  white-space: pre-wrap;
+  min-height: 120px;
+}
+
+.xa-dash-persona-template {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--xa-border);
+  border-radius: var(--xa-radius-sm);
+  margin-bottom: 6px;
+  background: var(--xa-bg-card);
+  cursor: pointer;
+  transition: border-color 0.18s var(--xa-ease);
+}
+.xa-dash-persona-template:hover { border-color: rgba(182, 144, 79, 0.4); }
+.xa-dash-persona-template.is-active { border-color: var(--xa-accent-2); background: var(--xa-accent-soft); }
+
+/* ---- Buttons (dashboard uses bigger touch targets) ---- */
+.xa-dash-btn {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 650;
+  border-radius: var(--xa-radius-sm);
+  border: 1px solid var(--xa-border);
+  cursor: pointer;
+  transition: background 0.18s var(--xa-ease), border-color 0.18s, transform 0.16s var(--xa-ease);
+}
+.xa-dash-btn:active { transform: scale(0.97); }
+.xa-dash-btn-primary { background: linear-gradient(160deg, var(--xa-accent-bright), var(--xa-accent)); border-color: rgba(181, 42, 56, 0.6); color: #f5e9ea; }
+.xa-dash-btn-primary:hover { box-shadow: 0 6px 22px rgba(181, 42, 56, 0.42); }
+.xa-dash-btn-secondary { background: var(--xa-bg-card); color: var(--xa-ink); }
+.xa-dash-btn-secondary:hover { background: var(--xa-bg-hover); }
+.xa-dash-btn-danger { background: var(--xa-danger-soft); color: #e8a3ab; }
+.xa-dash-btn-danger:hover { background: rgba(181, 42, 56, 0.3); color: #fff; }
+
+/* ---- Empty state ---- */
+.xa-dash-empty { text-align: center; padding: 40px 20px; color: var(--xa-ink-3); font-size: 13px; }

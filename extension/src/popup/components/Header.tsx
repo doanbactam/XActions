@@ -27,6 +27,15 @@ export function Header({ connected, headerSub, paused, onTogglePause, onEmergenc
         </div>
         <button
           type="button"
+          className="xa-icon-btn"
+          title="Mở dashboard (tab mới)"
+          aria-label="Dashboard"
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('dashboard/dashboard.html') })}
+        >
+          ⛶
+        </button>
+        <button
+          type="button"
           className={`xa-icon-btn ${paused ? 'is-paused' : ''}`}
           title="Pause All (Ctrl+Shift+P)"
           aria-label={paused ? 'Resume' : 'Pause'}

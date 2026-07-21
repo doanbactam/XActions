@@ -2,3 +2,5 @@ node_modules/
 dist/
 popup/popup.bundle.js
 popup/popup.bundle.css
+dashboard/dashboard.bundle.js
+dashboard/dashboard.bundle.css

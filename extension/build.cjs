@@ -25,6 +25,9 @@ const INCLUDE = [
   'popup/popup.html',
   'popup/popup.bundle.css',
   'popup/popup.bundle.js',
+  'dashboard/dashboard.html',
+  'dashboard/dashboard.bundle.css',
+  'dashboard/dashboard.bundle.js',
   'sidepanel/sidepanel.html',
   'sidepanel/sidepanel.js',
   'icons/icon16.png',
@@ -32,9 +35,9 @@ const INCLUDE = [
   'icons/icon128.png',
 ];
 
-// popup.bundle.js is an esbuild output (minified IIFE) — skip node's --check,
-// which chokes on some modern syntax esbuild lowers differently.
-const JS_CHECK = INCLUDE.filter((f) => f.endsWith('.js') && f !== 'popup/popup.bundle.js');
+// popup.bundle.js + dashboard.bundle.js are esbuild outputs (minified IIFE) —
+// skip node's --check, which chokes on some modern syntax esbuild lowers differently.
+const JS_CHECK = INCLUDE.filter((f) => f.endsWith('.js') && f !== 'popup/popup.bundle.js' && f !== 'dashboard/dashboard.bundle.js');
 
 function fail(msg) {
   console.error('❌', msg);

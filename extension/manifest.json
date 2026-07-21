@@ -47,6 +47,13 @@
     "default_path": "sidepanel/sidepanel.html"
   },
 
+  "web_accessible_resources": [
+    {
+      "resources": ["content/injected.js"],
+      "matches": ["https://x.com/*", "https://twitter.com/*"]
+    }
+  ],
+
   "content_scripts": [
     {
       "matches": ["https://x.com/*", "https://twitter.com/*"],
