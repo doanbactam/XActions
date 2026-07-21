@@ -596,24 +596,86 @@
   // ============================================
   // ACCOUNT INFO SCRAPER
   // ============================================
+  /**
+   * Logged-in account — never trust bare pathname (home/explore/… are not handles).
+   */
   function scrapeAccountInfo() {
-    try {
-      // Try to get account info from the page
-      const nameEl = document.querySelector('[data-testid="UserName"]') || document.querySelector('div[dir="ltr"] > span');
-      const avatarEl = document.querySelector('[data-testid="UserAvatar-Container"] img') || document.querySelector('img[alt][src*="profile_images"]');
+    const RESERVED = new Set([
+      'home', 'explore', 'search', 'notifications', 'messages', 'i', 'settings',
+      'compose', 'login', 'logout', 'signup', 'tos', 'privacy', 'jobs', 'about',
+      'following', 'followers', 'lists', 'communities', 'bookmarks', 'premium',
+    ]);
 
-      // Try nav sidebar for logged-in user
-      const sidebarAvatar = document.querySelector('div[data-testid="SideNav_AccountSwitcher_Button"] img');
-      const sidebarName = document.querySelector('div[data-testid="SideNav_AccountSwitcher_Button"]');
+    try {
+      let handle = '';
+      let name = '';
+      let avatar = '';
+
+      // 1) Account switcher (most reliable for logged-in user)
+      const switcher = document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
+      if (switcher) {
+        const txt = switcher.innerText || switcher.textContent || '';
+        const m = txt.match(/@([A-Za-z0-9_]{1,15})/);
+        if (m) handle = m[1];
+        const lines = txt.split('\n').map((s) => s.trim()).filter(Boolean);
+        name = lines.find((l) => !l.startsWith('@')) || lines[0] || '';
+        avatar = switcher.querySelector('img')?.src || '';
+      }
+
+      // 2) Profile page self — UserName block
+      if (!handle) {
+        const userName = document.querySelector('[data-testid="UserName"]');
+        if (userName) {
+          const m = (userName.innerText || '').match(/@([A-Za-z0-9_]{1,15})/);
+          if (m) handle = m[1];
+          name = name || (userName.innerText || '').split('\n')[0] || '';
+        }
+      }
+
+      // 3) Profile link in left nav (a[href="/handle"] with avatar)
+      if (!handle) {
+        const navLinks = document.querySelectorAll('nav a[href^="/"], header a[href^="/"]');
+        for (const a of navLinks) {
+          const href = a.getAttribute('href') || '';
+          const m = href.match(/^\/([A-Za-z0-9_]{1,15})$/);
+          if (!m || RESERVED.has(m[1].toLowerCase())) continue;
+          if (a.querySelector('img') || /profile/i.test(a.getAttribute('aria-label') || '')) {
+            handle = m[1];
+            break;
+          }
+        }
+      }
+
+      // 4) Pathname only if looks like a real profile path
+      if (!handle) {
+        const seg = (location.pathname.split('/')[1] || '').replace(/^@/, '');
+        if (seg && !RESERVED.has(seg.toLowerCase()) && /^[A-Za-z0-9_]{1,15}$/.test(seg)) {
+          handle = seg;
+        }
+      }
+
+      if (!avatar) {
+        avatar =
+          document.querySelector('[data-testid="SideNav_AccountSwitcher_Button"] img')?.src ||
+          document.querySelector('a[href*="/photo"] img')?.src ||
+          '';
+      }
+      if (!name) {
+        name =
+          document.querySelector('[data-testid="UserName"] span')?.textContent ||
+          handle ||
+          'Unknown';
+      }
 
       return {
-        name: nameEl?.textContent || sidebarName?.querySelector('span')?.textContent || 'Unknown',
-        avatar: avatarEl?.src || sidebarAvatar?.src || '',
-        handle: window.location.pathname.split('/')[1] || '',
-        url: window.location.href,
+        name,
+        avatar,
+        handle: handle || '',
+        url: location.href,
+        path: location.pathname,
       };
     } catch {
-      return { name: 'Unknown', avatar: '', handle: '', url: window.location.href };
+      return { name: 'Unknown', avatar: '', handle: '', url: location.href, path: location.pathname };
     }
   }
 
@@ -658,8 +720,958 @@
       case 'GET_ACCOUNT_INFO':
         window.postMessage({ source: 'xactions-page', type: 'ACCOUNT_INFO', data: scrapeAccountInfo() }, '*');
         break;
+
+      case 'AGENT_TOOL': {
+        const requestId = msg.requestId;
+        let result;
+        try {
+          result = await runAgentPageTool(msg.tool, msg.args || {});
+        } catch (err) {
+          result = { error: err.message || String(err) };
+        }
+        window.postMessage(
+          {
+            source: 'xactions-page',
+            type: 'AGENT_TOOL_RESULT',
+            requestId,
+            result,
+          },
+          '*',
+        );
+        break;
+      }
     }
   });
+
+  // ============================================
+  // AGENT PAGE TOOLS (~70 DOM tools for AI)
+  // ============================================
+  async function runAgentPageTool(tool, args) {
+    const core = window.XActions.Core;
+    const { sleep, SELECTORS, clickElement, waitForElement, typeText, extractUsername } = core;
+    const a = args || {};
+
+    // Normalize legacy short names
+    const aliases = {
+      scroll_timeline: 'x_scroll_timeline',
+      get_page_context: 'x_get_page_context',
+    };
+    const name = aliases[tool] || tool;
+
+    // ── helpers ──────────────────────────────────────────
+    function parseCount(txt) {
+      if (!txt) return 0;
+      const s = String(txt).replace(/,/g, '').trim();
+      const m = s.match(/([\d.]+)\s*([KkMmBb])?/);
+      if (!m) return parseInt(s, 10) || 0;
+      let n = parseFloat(m[1]);
+      const u = (m[2] || '').toUpperCase();
+      if (u === 'K') n *= 1e3;
+      if (u === 'M') n *= 1e6;
+      if (u === 'B') n *= 1e9;
+      return Math.round(n);
+    }
+
+    function authorFromTweet(el) {
+      const nameBlock = el.querySelector(SELECTORS.userName);
+      if (!nameBlock) return 'unknown';
+      const handles = Array.from(nameBlock.querySelectorAll('a[href^="/"]'))
+        .map((x) => x.getAttribute('href')?.replace(/^\//, ''))
+        .filter((h) => h && !h.includes('/'));
+      return handles[0] || 'unknown';
+    }
+
+    function tweetUrl(el) {
+      return (
+        el.querySelector(SELECTORS.tweetLink)?.href ||
+        el.querySelector('a[href*="/status/"]')?.href ||
+        ''
+      );
+    }
+
+    function collectTweets(max = 15) {
+      const out = [];
+      for (const el of document.querySelectorAll(SELECTORS.tweet)) {
+        if (out.length >= max) break;
+        const text = el.querySelector(SELECTORS.tweetText)?.innerText?.trim() || '';
+        if (!text) continue;
+        const stats = {};
+        const group = el.querySelector('[role="group"]');
+        if (group) {
+          const aria = group.getAttribute('aria-label') || '';
+          const likes = aria.match(/([\d,.]+[KkMmBb]?)\s*like/i);
+          const rts = aria.match(/([\d,.]+[KkMmBb]?)\s*repost/i);
+          const replies = aria.match(/([\d,.]+[KkMmBb]?)\s*repl/i);
+          if (likes) stats.likes = parseCount(likes[1]);
+          if (rts) stats.retweets = parseCount(rts[1]);
+          if (replies) stats.replies = parseCount(replies[1]);
+        }
+        const timeEl = el.querySelector('time');
+        out.push({
+          author: authorFromTweet(el),
+          text: text.slice(0, 800),
+          url: tweetUrl(el),
+          time: timeEl?.getAttribute('datetime') || timeEl?.textContent || '',
+          stats,
+          el,
+        });
+      }
+      return out;
+    }
+
+    function collectUsers(max = 20) {
+      const out = [];
+      for (const cell of document.querySelectorAll(SELECTORS.userCell)) {
+        if (out.length >= max) break;
+        const username = extractUsername(cell);
+        if (!username) continue;
+        const display =
+          cell.querySelector(SELECTORS.userName)?.innerText?.split('\n')[0] || username;
+        const bio = cell.querySelector('[data-testid="UserDescription"]')?.innerText || '';
+        const followsYou = !!cell.querySelector(SELECTORS.userFollowIndicator);
+        const canFollow = !!cell.querySelector(SELECTORS.followButton);
+        const canUnfollow = !!cell.querySelector(SELECTORS.unfollowButton);
+        out.push({
+          username,
+          display: display.slice(0, 80),
+          bio: bio.slice(0, 200),
+          followsYou,
+          canFollow,
+          canUnfollow,
+          el: cell,
+        });
+      }
+      return out;
+    }
+
+    function findTweet(url, keyword) {
+      const tweets = collectTweets(40);
+      if (url) {
+        const hit = tweets.find((t) => t.url && t.url.includes(url.replace(/https?:\/\/(www\.)?x\.com/, '').replace(/https?:\/\/(www\.)?twitter\.com/, '')));
+        if (hit) return hit;
+        const byId = url.match(/status\/(\d+)/)?.[1];
+        if (byId) {
+          const h2 = tweets.find((t) => t.url?.includes(byId));
+          if (h2) return h2;
+        }
+      }
+      if (keyword) {
+        const kw = String(keyword).toLowerCase();
+        return tweets.find((t) => t.text.toLowerCase().includes(kw));
+      }
+      return tweets[0] || null;
+    }
+
+    /**
+     * Soft navigate on X SPA without killing the page (hard location.href would
+     * drop AGENT_TOOL_RESULT). Prefer link click → history push → last resort assign.
+     */
+    async function go(pathOrUrl) {
+      let url = pathOrUrl;
+      if (!url) return { error: 'url required' };
+      if (url.startsWith('/')) url = `https://x.com${url}`;
+      if (!/^https?:\/\//i.test(url)) url = `https://x.com/${url.replace(/^@/, '')}`;
+
+      let path = '/';
+      let search = '';
+      try {
+        const u = new URL(url);
+        path = u.pathname || '/';
+        search = u.search || '';
+      } catch {
+        return { error: 'bad url', url };
+      }
+
+      const target = path + search;
+      const here = location.pathname + location.search;
+      if (here === target || location.href.replace(/\/$/, '') === url.replace(/\/$/, '')) {
+        return { url: location.href, navigated: false, method: 'noop' };
+      }
+
+      // 1) Click existing SPA link
+      const candidates = [
+        `a[href="${target}"]`,
+        `a[href="${path}"]`,
+        `a[href^="${path}?"]`,
+      ];
+      for (const sel of candidates) {
+        const link = document.querySelector(sel);
+        if (link) {
+          link.click();
+          await sleep(1400);
+          return { url: location.href, navigated: true, method: 'link' };
+        }
+      }
+
+      // 2) Synthetic anchor click (X often intercepts)
+      try {
+        const aEl = document.createElement('a');
+        aEl.href = target;
+        aEl.style.display = 'none';
+        document.body.appendChild(aEl);
+        aEl.click();
+        aEl.remove();
+        await sleep(1600);
+        if (location.pathname + location.search === target || location.pathname === path) {
+          return { url: location.href, navigated: true, method: 'synthetic_a' };
+        }
+      } catch {
+        /* continue */
+      }
+
+      // 3) history API + popstate (best-effort SPA)
+      try {
+        window.history.pushState({}, '', target);
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        await sleep(1200);
+        if (location.pathname === path) {
+          return { url: location.href, navigated: true, method: 'history' };
+        }
+      } catch {
+        /* continue */
+      }
+
+      // 4) Hard nav — reply first via microtask is impossible after unload;
+      // prefer staying put and reporting need for SW nav tools.
+      return {
+        url: location.href,
+        navigated: false,
+        method: 'failed_soft',
+        error: 'SPA soft-nav failed — use x_navigate / x_go_* (service worker nav)',
+        wanted: url,
+      };
+    }
+
+    async function clickTweetAction(tweet, testidWant, testidAlt) {
+      if (!tweet?.el) return false;
+      const btn =
+        tweet.el.querySelector(`[data-testid="${testidWant}"]`) ||
+        (testidAlt ? tweet.el.querySelector(`[data-testid="${testidAlt}"]`) : null);
+      if (!btn) return false;
+      await clickElement(btn);
+      await sleep(600);
+      // confirm sheet for RT etc.
+      const confirm = document.querySelector(SELECTORS.confirmButton);
+      if (confirm) {
+        await clickElement(confirm);
+        await sleep(400);
+      }
+      return true;
+    }
+
+    async function typeIntoComposer(text) {
+      let box =
+        document.querySelector(SELECTORS.tweetInput) ||
+        document.querySelector('[data-testid="tweetTextarea_0"]') ||
+        document.querySelector('[contenteditable="true"][data-testid^="tweetTextarea"]');
+      if (!box) {
+        // open compose
+        const compose =
+          document.querySelector('[data-testid="SideNav_NewTweet_Button"]') ||
+          document.querySelector('a[href="/compose/post"]') ||
+          document.querySelector('a[href="/compose/tweet"]');
+        if (compose) {
+          await clickElement(compose);
+          await sleep(800);
+        }
+        box =
+          (await waitForElement(SELECTORS.tweetInput, 5000)) ||
+          document.querySelector('[contenteditable="true"][role="textbox"]');
+      }
+      if (!box) return { ok: false, error: 'composer not found' };
+
+      box.focus();
+      // Draft.js / Lexical-friendly: select all + insert
+      document.execCommand('selectAll', false, null);
+      document.execCommand('insertText', false, text);
+      box.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
+      await sleep(400);
+      return { ok: true, box };
+    }
+
+    async function clickPostIfPossible() {
+      const btn =
+        document.querySelector('[data-testid="tweetButtonInline"]') ||
+        document.querySelector('[data-testid="tweetButton"]');
+      if (!btn || btn.getAttribute('aria-disabled') === 'true' || btn.disabled) {
+        return { posted: false, reason: 'Post button disabled or missing' };
+      }
+      await clickElement(btn);
+      await sleep(1200);
+      return { posted: true };
+    }
+
+    function matchKeywords(text, keywords) {
+      if (!keywords || !keywords.length) return true;
+      const lower = text.toLowerCase();
+      return keywords.some((k) => lower.includes(String(k).toLowerCase()));
+    }
+
+    function splitKw(val) {
+      if (!val) return [];
+      if (Array.isArray(val)) return val.map(String);
+      return String(val)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    // ── dispatch ─────────────────────────────────────────
+    switch (name) {
+      // Navigation
+      case 'x_scroll_timeline': {
+        const px = Math.min(Math.max(Number(a.pixels) || 1200, 200), 4000);
+        window.scrollBy({ top: px, behavior: 'smooth' });
+        await sleep(800);
+        return { scrolled: px, y: window.scrollY };
+      }
+      case 'x_get_page_context': {
+        const maxTweets = Math.min(Math.max(Number(a.maxTweets) || 8, 1), 20);
+        const tweets = collectTweets(maxTweets).map(({ el, ...rest }) => rest);
+        return {
+          url: location.href,
+          path: location.pathname,
+          title: document.title,
+          account: scrapeAccountInfo(),
+          visibleTweetCount: tweets.length,
+          tweets,
+        };
+      }
+      case 'x_navigate':
+        return go(a.url);
+      case 'x_go_home':
+        return go('/home');
+      case 'x_go_profile':
+        return go(`/${String(a.username || '').replace(/^@/, '')}`);
+      case 'x_go_notifications':
+        return go('/notifications');
+      case 'x_go_messages':
+        return go('/messages');
+      case 'x_go_explore': {
+        if (a.query) return go(`/search?q=${encodeURIComponent(a.query)}&src=typed_query`);
+        return go('/explore');
+      }
+      case 'x_open_following_page': {
+        const u = String(a.username || scrapeAccountInfo().handle || '').replace(/^@/, '');
+        if (!u) return { error: 'username required' };
+        return go(`/${u}/following`);
+      }
+      case 'x_open_lists':
+        return go('/i/lists');
+      case 'x_open_communities':
+        return go('/i/communities');
+      case 'x_open_bookmarks':
+        return go('/i/bookmarks');
+      case 'x_open_settings':
+        return go(a.path ? `/settings/${a.path.replace(/^\//, '')}` : '/settings');
+      case 'x_open_search_people':
+        return go(`/search?q=${encodeURIComponent(a.query || '')}&f=user`);
+      case 'x_open_user':
+        return go(`/${String(a.username || '').replace(/^@/, '')}`);
+      case 'x_refresh_page':
+        // Hard reload kills this script — SW owns x_refresh_page.
+        return {
+          reloading: false,
+          note: 'Handled by service worker via chrome.tabs.reload',
+        };
+
+      // Tweet actions
+      case 'x_like': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok = await clickTweetAction(t, 'like');
+        return { success: ok, url: t.url, author: t.author };
+      }
+      case 'x_unlike': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok = await clickTweetAction(t, 'unlike');
+        return { success: ok, url: t.url };
+      }
+      case 'x_retweet': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok = await clickTweetAction(t, 'retweet');
+        // menu item
+        const menuRt = document.querySelector('[data-testid="retweetConfirm"]');
+        if (menuRt) {
+          await clickElement(menuRt);
+          await sleep(400);
+        }
+        return { success: ok, url: t.url };
+      }
+      case 'x_unretweet': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok = await clickTweetAction(t, 'unretweet');
+        const menu = document.querySelector('[data-testid="unretweetConfirm"]');
+        if (menu) {
+          await clickElement(menu);
+          await sleep(400);
+        }
+        return { success: ok, url: t.url };
+      }
+      case 'x_bookmark': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok = await clickTweetAction(t, 'bookmark');
+        return { success: ok, url: t.url };
+      }
+      case 'x_unbookmark': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const ok =
+          (await clickTweetAction(t, 'removeBookmark')) ||
+          (await clickTweetAction(t, 'bookmark'));
+        return { success: ok, url: t.url };
+      }
+      case 'x_reply': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const replyBtn = t.el.querySelector(SELECTORS.replyButton);
+        if (!replyBtn) return { success: false, error: 'reply button missing' };
+        await clickElement(replyBtn);
+        await sleep(700);
+        const typed = await typeIntoComposer(a.text || '');
+        if (!typed.ok) return typed;
+        const post = await clickPostIfPossible();
+        return { success: true, url: t.url, ...post, text: a.text };
+      }
+      case 'x_quote_tweet': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        await clickTweetAction(t, 'retweet');
+        await sleep(400);
+        const quote = document.querySelector('[data-testid="Dropdown"] [href*="quote"]') ||
+          Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+            /quote/i.test(el.textContent || ''),
+          );
+        if (quote) await clickElement(quote);
+        await sleep(700);
+        const typed = await typeIntoComposer(a.text || '');
+        if (!typed.ok) return typed;
+        const post = await clickPostIfPossible();
+        return { success: true, url: t.url, ...post };
+      }
+      case 'x_post_tweet': {
+        const typed = await typeIntoComposer(a.text || '');
+        if (!typed.ok) return typed;
+        const post = await clickPostIfPossible();
+        return { success: true, text: a.text, ...post };
+      }
+      case 'x_post_thread': {
+        const parts = String(a.tweets || '')
+          .split(/\n*---\n*/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!parts.length) return { error: 'no tweets' };
+        const typed = await typeIntoComposer(parts[0]);
+        if (!typed.ok) return typed;
+        // add more if UI allows
+        for (let i = 1; i < parts.length; i++) {
+          const add =
+            document.querySelector('[data-testid="addButton"]') ||
+            document.querySelector('[aria-label*="Add"]');
+          if (add) {
+            await clickElement(add);
+            await sleep(500);
+            await typeIntoComposer(parts[i]);
+          }
+        }
+        const post = await clickPostIfPossible();
+        return { success: true, parts: parts.length, ...post };
+      }
+      case 'x_delete_tweet': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const caret = t.el.querySelector('[data-testid="caret"]');
+        if (!caret) return { success: false, error: 'caret menu not found' };
+        await clickElement(caret);
+        await sleep(500);
+        const del = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+          /delete/i.test(el.textContent || ''),
+        );
+        if (!del) return { success: false, error: 'Delete not in menu (not your tweet?)' };
+        await clickElement(del);
+        await sleep(400);
+        const conf = document.querySelector(SELECTORS.confirmButton);
+        if (conf) await clickElement(conf);
+        return { success: true, url: t.url };
+      }
+      case 'x_pin_tweet': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { success: false, error: 'tweet not found' };
+        const caret = t.el.querySelector('[data-testid="caret"]');
+        if (!caret) return { success: false, error: 'caret not found' };
+        await clickElement(caret);
+        await sleep(500);
+        const pin = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+          /pin/i.test(el.textContent || ''),
+        );
+        if (!pin) return { success: false, error: 'Pin not available' };
+        await clickElement(pin);
+        return { success: true, url: t.url };
+      }
+
+      // User actions
+      case 'x_follow':
+      case 'x_unfollow': {
+        const uname = String(a.username || '').replace(/^@/, '').toLowerCase();
+        // try user cells first
+        const users = collectUsers(40);
+        let cell = uname ? users.find((u) => u.username === uname) : users.find((u) => u.canFollow || u.canUnfollow);
+        if (!cell && uname) {
+          await go(`/${uname}`);
+          await sleep(1200);
+        }
+        const wantFollow = name === 'x_follow';
+        let btn = null;
+        if (cell?.el) {
+          btn = wantFollow
+            ? cell.el.querySelector(SELECTORS.followButton)
+            : cell.el.querySelector(SELECTORS.unfollowButton);
+        }
+        if (!btn) {
+          // profile page button
+          btn = wantFollow
+            ? document.querySelector('[data-testid$="-follow"]')
+            : document.querySelector('[data-testid$="-unfollow"]');
+        }
+        if (!btn) return { success: false, error: 'follow/unfollow button not found', username: uname };
+        await clickElement(btn);
+        await sleep(500);
+        if (!wantFollow) {
+          const conf = await waitForElement(SELECTORS.confirmButton, 2000);
+          if (conf) await clickElement(conf);
+        }
+        return { success: true, action: wantFollow ? 'follow' : 'unfollow', username: uname };
+      }
+      case 'x_mute_user':
+      case 'x_block_user':
+      case 'x_unmute_user':
+      case 'x_unblock_user':
+      case 'x_report_user': {
+        const uname = String(a.username || '').replace(/^@/, '');
+        if (!uname) return { error: 'username required' };
+        await go(`/${uname}`);
+        await sleep(1000);
+        const more =
+          document.querySelector('[data-testid="userActions"]') ||
+          document.querySelector('[aria-label*="More"]');
+        if (!more) return { success: false, error: 'user menu not found' };
+        await clickElement(more);
+        await sleep(500);
+        const labelMap = {
+          x_mute_user: /mute @/i,
+          x_unmute_user: /unmute @/i,
+          x_block_user: /block @/i,
+          x_unblock_user: /unblock @/i,
+          x_report_user: /report/i,
+        };
+        const item = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+          labelMap[name].test(el.textContent || ''),
+        );
+        if (!item) return { success: false, error: 'menu item not found', username: uname };
+        await clickElement(item);
+        await sleep(400);
+        const conf = document.querySelector(SELECTORS.confirmButton);
+        if (conf && (name === 'x_block_user' || name === 'x_mute_user')) {
+          await clickElement(conf);
+        }
+        return { success: true, action: name, username: uname };
+      }
+      case 'x_get_user_card': {
+        const users = collectUsers(30).map(({ el, ...rest }) => rest);
+        if (a.username) {
+          const u = users.find((x) => x.username === String(a.username).replace(/^@/, '').toLowerCase());
+          return u || { error: 'not visible', username: a.username };
+        }
+        return { users: users.slice(0, 10) };
+      }
+      case 'x_follow_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 5, 1), 20);
+        const dry = !!a.dryRun;
+        const users = collectUsers(40).filter((u) => u.canFollow);
+        let n = 0;
+        const followed = [];
+        for (const u of users) {
+          if (n >= max) break;
+          if (dry) {
+            followed.push(u.username);
+            n++;
+            continue;
+          }
+          const btn = u.el.querySelector(SELECTORS.followButton);
+          if (btn) {
+            await clickElement(btn);
+            followed.push(u.username);
+            n++;
+            await sleep(1500);
+          }
+        }
+        return { success: true, dryRun: dry, count: followed.length, followed };
+      }
+
+      // Read / scrape
+      case 'x_get_visible_tweets': {
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 40);
+        return { tweets: collectTweets(max).map(({ el, ...r }) => r) };
+      }
+      case 'x_get_visible_users': {
+        const max = Math.min(Math.max(Number(a.max) || 20, 1), 50);
+        return { users: collectUsers(max).map(({ el, ...r }) => r) };
+      }
+      case 'x_search_tweets': {
+        await go(`/search?q=${encodeURIComponent(a.query || '')}&src=typed_query`);
+        await sleep(1500);
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        return { query: a.query, tweets: collectTweets(max).map(({ el, ...r }) => r) };
+      }
+      case 'x_get_trends': {
+        const max = Math.min(Math.max(Number(a.max) || 10, 1), 30);
+        const trends = [];
+        const items = document.querySelectorAll('[data-testid="trend"]');
+        for (const el of items) {
+          if (trends.length >= max) break;
+          const text = el.innerText?.trim() || '';
+          if (text) trends.push(text.split('\n').slice(0, 3).join(' · '));
+        }
+        // fallback explore links
+        if (!trends.length) {
+          document.querySelectorAll('a[href*="/search?q="]').forEach((aEl) => {
+            if (trends.length >= max) return;
+            const t = aEl.innerText?.trim();
+            if (t && t.length < 80) trends.push(t);
+          });
+        }
+        return { trends, path: location.pathname };
+      }
+      case 'x_get_notifications': {
+        if (!location.pathname.includes('notifications')) {
+          await go('/notifications');
+          await sleep(1200);
+        }
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 40);
+        const items = [];
+        document.querySelectorAll('[data-testid="cellInnerDiv"]').forEach((el) => {
+          if (items.length >= max) return;
+          const text = el.innerText?.trim();
+          if (text && text.length > 5) items.push(text.slice(0, 300));
+        });
+        return { notifications: items };
+      }
+      case 'x_get_profile_stats': {
+        if (a.username) {
+          await go(`/${String(a.username).replace(/^@/, '')}`);
+          await sleep(1200);
+        }
+        const links = Array.from(document.querySelectorAll('a[href$="/followers"], a[href$="/following"], a[href*="/verified_followers"]'));
+        const stats = { url: location.href };
+        for (const link of links) {
+          const t = link.innerText || '';
+          if (/following/i.test(link.getAttribute('href') || '') && !/followers/i.test(link.getAttribute('href') || '')) {
+            stats.following = parseCount(t);
+          } else if (/followers/i.test(link.getAttribute('href') || '')) {
+            stats.followers = parseCount(t);
+          }
+        }
+        // posts count heuristic
+        const header = document.querySelector('[data-testid="primaryColumn"] h2')?.parentElement;
+        const postsTxt = header?.innerText || '';
+        const pm = postsTxt.match(/([\d,.]+[KkMm]?)\s*posts?/i);
+        if (pm) stats.posts = parseCount(pm[1]);
+        stats.displayName =
+          document.querySelector('[data-testid="UserName"] span')?.textContent || '';
+        return stats;
+      }
+      case 'x_get_tweet_detail': {
+        if (a.url) {
+          await go(a.url);
+          await sleep(1200);
+        }
+        const tweets = collectTweets(5).map(({ el, ...r }) => r);
+        return { tweet: tweets[0] || null, related: tweets.slice(1) };
+      }
+      case 'x_get_replies_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 40);
+        const tweets = collectTweets(max + 1).map(({ el, ...r }) => r);
+        return { replies: tweets.slice(1), root: tweets[0] || null };
+      }
+      case 'x_get_media_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 20, 1), 50);
+        const media = [];
+        document.querySelectorAll(`${SELECTORS.tweet} img[src*="media"], ${SELECTORS.tweet} video`).forEach((el) => {
+          if (media.length >= max) return;
+          if (el.tagName === 'VIDEO') media.push({ type: 'video', src: el.src || el.currentSrc });
+          else media.push({ type: 'image', src: el.src });
+        });
+        return { media };
+      }
+      case 'x_get_likes_tab': {
+        const u = String(a.username || '').replace(/^@/, '');
+        if (u) {
+          await go(`/${u}/likes`);
+          await sleep(1200);
+        }
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        return { tweets: collectTweets(max).map(({ el, ...r }) => r) };
+      }
+      case 'x_get_followers_visible':
+      case 'x_get_following_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 20, 1), 50);
+        return { users: collectUsers(max).map(({ el, ...r }) => r), path: location.pathname };
+      }
+      case 'x_get_bookmarks_visible': {
+        if (!location.pathname.includes('bookmarks')) {
+          await go('/i/bookmarks');
+          await sleep(1200);
+        }
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        return { tweets: collectTweets(max).map(({ el, ...r }) => r) };
+      }
+      case 'x_get_lists_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        const lists = [];
+        document.querySelectorAll('a[href*="/lists/"]').forEach((el) => {
+          if (lists.length >= max) return;
+          const t = el.innerText?.trim();
+          if (t) lists.push({ name: t.split('\n')[0], href: el.href });
+        });
+        return { lists };
+      }
+      case 'x_extract_links': {
+        const max = Math.min(Math.max(Number(a.max) || 30, 1), 50);
+        const links = [];
+        document.querySelectorAll(`${SELECTORS.tweet} a[href^="https://"]`).forEach((el) => {
+          if (links.length >= max) return;
+          const href = el.href;
+          if (/x\.com|twitter\.com|t\.co/.test(href) && !/t\.co/.test(href)) return;
+          links.push(href);
+        });
+        return { links: [...new Set(links)] };
+      }
+      case 'x_copy_tweet_text': {
+        const t = findTweet(a.url, a.keyword);
+        if (!t) return { error: 'tweet not found' };
+        return { text: t.text, author: t.author, url: t.url };
+      }
+
+      // Analytics visible
+      case 'x_engagement_snapshot': {
+        const max = Math.min(Math.max(Number(a.max) || 20, 1), 40);
+        const tweets = collectTweets(max);
+        const sum = { likes: 0, retweets: 0, replies: 0, count: tweets.length };
+        for (const t of tweets) {
+          sum.likes += t.stats.likes || 0;
+          sum.retweets += t.stats.retweets || 0;
+          sum.replies += t.stats.replies || 0;
+        }
+        return sum;
+      }
+      case 'x_follower_ratio_visible': {
+        const stats = await runAgentPageTool('x_get_profile_stats', a);
+        const followers = stats.followers || 0;
+        const following = stats.following || 0;
+        return {
+          ...stats,
+          ratio: following ? +(followers / following).toFixed(2) : null,
+        };
+      }
+      case 'x_top_tweets_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 10, 1), 20);
+        const tweets = collectTweets(40).map(({ el, ...r }) => r);
+        tweets.sort(
+          (x, y) =>
+            (y.stats.likes || 0) + (y.stats.retweets || 0) * 2 -
+            ((x.stats.likes || 0) + (x.stats.retweets || 0) * 2),
+        );
+        return { top: tweets.slice(0, max) };
+      }
+      case 'x_hashtag_frequency': {
+        const tweets = collectTweets(Math.min(Number(a.max) || 30, 40));
+        const freq = {};
+        for (const t of tweets) {
+          const tags = t.text.match(/#[\w\u00C0-\u024F]+/g) || [];
+          for (const tag of tags) {
+            const k = tag.toLowerCase();
+            freq[k] = (freq[k] || 0) + 1;
+          }
+        }
+        return {
+          hashtags: Object.entries(freq)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 30)
+            .map(([tag, count]) => ({ tag, count })),
+        };
+      }
+      case 'x_mention_frequency': {
+        const tweets = collectTweets(Math.min(Number(a.max) || 30, 40));
+        const freq = {};
+        for (const t of tweets) {
+          const ms = t.text.match(/@\w+/g) || [];
+          for (const m of ms) {
+            const k = m.toLowerCase();
+            freq[k] = (freq[k] || 0) + 1;
+          }
+        }
+        return {
+          mentions: Object.entries(freq)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 30)
+            .map(([handle, count]) => ({ handle, count })),
+        };
+      }
+      case 'x_best_time_hint': {
+        const tweets = collectTweets(Math.min(Number(a.max) || 30, 40));
+        const hours = {};
+        for (const t of tweets) {
+          if (!t.time) continue;
+          const d = new Date(t.time);
+          if (Number.isNaN(d.getTime())) continue;
+          const h = d.getHours();
+          hours[h] = (hours[h] || 0) + 1;
+        }
+        const ranked = Object.entries(hours)
+          .map(([h, c]) => ({ hour: Number(h), count: c }))
+          .sort((a, b) => b.count - a.count);
+        return {
+          hourHistogram: ranked,
+          hint: ranked[0]
+            ? `Visible sample peaks around ${ranked[0].hour}:00 (local browser time).`
+            : 'Not enough timestamps visible.',
+        };
+      }
+      case 'x_bot_score_visible': {
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        const users = collectUsers(max).map(({ el, ...r }) => {
+          let score = 0;
+          const notes = [];
+          if (!r.bio) {
+            score += 2;
+            notes.push('empty bio');
+          }
+          if (/bot|follow.?back|crypto airdrop/i.test(r.bio)) {
+            score += 3;
+            notes.push('spammy bio');
+          }
+          if (/^\w+\d{4,}$/.test(r.username)) {
+            score += 1;
+            notes.push('numeric handle');
+          }
+          return { ...r, botScore: score, notes };
+        });
+        return { users };
+      }
+      case 'x_link_domains': {
+        const linksRes = await runAgentPageTool('x_extract_links', a);
+        const domains = {};
+        for (const href of linksRes.links || []) {
+          try {
+            const d = new URL(href).hostname.replace(/^www\./, '');
+            domains[d] = (domains[d] || 0) + 1;
+          } catch {
+            /* skip */
+          }
+        }
+        return {
+          domains: Object.entries(domains)
+            .sort((a, b) => b[1] - a[1])
+            .map(([domain, count]) => ({ domain, count })),
+        };
+      }
+
+      // Matching bulk one-shots
+      case 'x_like_visible_matching':
+      case 'x_retweet_visible_matching':
+      case 'x_bookmark_visible_matching': {
+        const max = Math.min(Math.max(Number(a.max) || 5, 1), 15);
+        const kws = splitKw(a.keywords);
+        const tweets = collectTweets(40);
+        const done = [];
+        for (const t of tweets) {
+          if (done.length >= max) break;
+          if (!matchKeywords(t.text, kws)) continue;
+          let ok = false;
+          if (name === 'x_like_visible_matching') ok = await clickTweetAction(t, 'like');
+          else if (name === 'x_retweet_visible_matching') {
+            ok = await clickTweetAction(t, 'retweet');
+            const menuRt = document.querySelector('[data-testid="retweetConfirm"]');
+            if (menuRt) await clickElement(menuRt);
+          } else ok = await clickTweetAction(t, 'bookmark');
+          if (ok) {
+            done.push({ author: t.author, url: t.url, text: t.text.slice(0, 80) });
+            await sleep(1200 + Math.random() * 800);
+          }
+        }
+        return { success: true, count: done.length, items: done };
+      }
+
+      // DM / account
+      case 'x_get_dm_preview': {
+        if (!location.pathname.includes('messages')) {
+          await go('/messages');
+          await sleep(1200);
+        }
+        const max = Math.min(Math.max(Number(a.max) || 15, 1), 30);
+        const convos = [];
+        document.querySelectorAll('[data-testid="conversation"] , [data-testid="cellInnerDiv"]').forEach((el) => {
+          if (convos.length >= max) return;
+          const t = el.innerText?.trim();
+          if (t && t.length > 3) convos.push(t.split('\n').slice(0, 3).join(' · ').slice(0, 200));
+        });
+        return { conversations: convos };
+      }
+      case 'x_compose_dm': {
+        const uname = String(a.username || '').replace(/^@/, '');
+        await go(`/messages/compose`);
+        await sleep(1000);
+        // try search recipient
+        const search =
+          document.querySelector('[data-testid="searchPeople"]') ||
+          document.querySelector('input[aria-label*="Search"]') ||
+          document.querySelector('input[type="text"]');
+        if (search && uname) {
+          search.focus();
+          document.execCommand('insertText', false, uname);
+          search.dispatchEvent(new Event('input', { bubbles: true }));
+          await sleep(1000);
+          const person = document.querySelector(`[data-testid="TypeaheadUser"]`) ||
+            document.querySelector(`div[role="listbox"] [role="option"]`);
+          if (person) await clickElement(person);
+          await sleep(600);
+        }
+        const box =
+          document.querySelector('[data-testid="dmComposerTextInput"]') ||
+          document.querySelector('[contenteditable="true"][role="textbox"]');
+        if (box && a.message) {
+          box.focus();
+          document.execCommand('insertText', false, a.message);
+          box.dispatchEvent(new InputEvent('input', { bubbles: true, data: a.message }));
+          await sleep(400);
+          const send = document.querySelector('[data-testid="dmComposerSendButton"]');
+          if (send) {
+            await clickElement(send);
+            return { success: true, username: uname, sent: true };
+          }
+          return { success: true, username: uname, sent: false, note: 'typed but send button not clicked' };
+        }
+        return { success: false, error: 'DM composer not ready', username: uname };
+      }
+      case 'x_get_sidebar_account':
+        return scrapeAccountInfo();
+
+      case 'x_open_messages_user': {
+        // better path: open compose
+        const uname = String(a.username || '').replace(/^@/, '');
+        await go('/messages/compose');
+        await sleep(800);
+        return { success: true, username: uname, note: 'opened compose — use x_compose_dm to send' };
+      }
+
+      default:
+        return { error: `Unsupported page tool: ${name}` };
+    }
+  }
 
   console.log('✅ XActions automation engine injected');
 

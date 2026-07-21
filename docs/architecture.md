@@ -2,6 +2,8 @@
 
 > XActions v3.1.0 — System architecture, project structure, and design decisions.
 
+> **SaaS / AI assistant (2027, single-operator first):** see [saas-backend-agent.md](./saas-backend-agent.md) — backend-central agent, Operation/queue as source of truth, CLI/local not default path.
+
 ## High-Level Architecture
 
 ```

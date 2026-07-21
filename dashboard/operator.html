@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operator Console — XActions Phase A</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <style>
+    :root {
+      --bg: #050608;
+      --card: #14181f;
+      --elevated: #0f1216;
+      --border: #2a313c;
+      --text: #eef1f4;
+      --muted: #8b949e;
+      --accent: #1d9bf0;
+      --success: #00c48c;
+      --danger: #f4212e;
+      --warning: #f5c518;
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background:
+        radial-gradient(ellipse 100% 50% at 50% -10%, rgba(29,155,240,.14), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: grid; place-items: center; font-weight: 900;
+      background: linear-gradient(145deg,#1a2330,#0d1117);
+      border: 1px solid var(--border);
+    }
+    .logo span { color: var(--accent); }
+    h1 { font-size: 1.15rem; font-weight: 750; letter-spacing: -.02em; }
+    .sub { font-size: .8rem; color: var(--muted); }
+    .pill {
+      font-size: .72rem; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    }
+    .pill.on { color: var(--success); border-color: rgba(0,196,140,.4); background: rgba(0,196,140,.12); }
+    .grid { display: grid; gap: 14px; }
+    @media (min-width: 800px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+    }
+    .card h2 {
+      font-size: .95rem; font-weight: 750; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card h2 em { font-style: normal; color: var(--muted); font-weight: 600; font-size: .75rem; }
+    label { display: block; font-size: .75rem; font-weight: 650; color: var(--muted); margin: 10px 0 5px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--elevated); color: var(--text);
+      font: inherit; outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(29,155,240,.55);
+      box-shadow: 0 0 0 3px rgba(29,155,240,.12);
+    }
+    textarea { min-height: 72px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .8rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    button {
+      appearance: none; border: none; cursor: pointer; font: inherit; font-weight: 700;
+      border-radius: 999px; padding: 9px 16px; font-size: .85rem;
+      transition: filter .15s, transform .1s, opacity .15s;
+    }
+    button:active { transform: scale(.98); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(180deg,#2aa3f5,var(--accent)); color: #fff;
+      box-shadow: 0 6px 16px rgba(29,155,240,.25);
+    }
+    .btn-secondary {
+      background: var(--elevated); color: var(--text); border: 1px solid var(--border);
+    }
+    .btn-danger {
+      background: rgba(244,33,46,.14); color: #ff8b92; border: 1px solid rgba(244,33,46,.35);
+    }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid transparent; }
+    .btn-ghost:hover { color: var(--text); }
+    .list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 280px; overflow: auto; }
+    .item {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; border-radius: 12px; background: var(--elevated);
+      border: 1px solid var(--border); font-size: .82rem;
+    }
+    .item strong { font-weight: 700; }
+    .meta { color: var(--muted); font-size: .72rem; margin-top: 2px; }
+    .badge {
+      font-size: .68rem; font-weight: 750; padding: 3px 8px; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0;
+    }
+    .badge.queued, .badge.pending { background: rgba(29,155,240,.15); color: #8fd0ff; }
+    .badge.completed, .badge.active { background: rgba(0,196,140,.15); color: var(--success); }
+    .badge.failed, .badge.cancelled, .badge.expired { background: rgba(244,33,46,.15); color: #ff8b92; }
+    .toast {
+      position: fixed; top: 14px; right: 14px; z-index: 50;
+      max-width: 360px; padding: 12px 14px; border-radius: 12px;
+      background: var(--card); border: 1px solid var(--border);
+      box-shadow: 0 12px 40px rgba(0,0,0,.45); font-size: .82rem;
+      display: none;
+    }
+    .toast.show { display: block; animation: in .2s ease; }
+    .toast.err { border-color: rgba(244,33,46,.45); }
+    .toast.ok { border-color: rgba(0,196,140,.45); }
+    @keyframes in { from { opacity: 0; transform: translateY(-6px); } }
+    .hidden { display: none !important; }
+    .hint { font-size: .75rem; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+    .hint code { background: var(--elevated); padding: 1px 5px; border-radius: 4px; font-size: .7rem; color: #9fd4ff; }
+    #panelApp.hidden, #panelAuth.hidden { display: none !important; }
+    .chat-card { margin-bottom: 14px; }
+    .chat-log {
+      min-height: 220px; max-height: 340px; overflow-y: auto;
+      background: var(--elevated); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; margin-bottom: 10px;
+    }
+    .msg { margin-bottom: 10px; max-width: 92%; }
+    .msg .role {
+      font-size: .68rem; font-weight: 750; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--muted); margin-bottom: 3px;
+    }
+    .msg .body {
+      padding: 10px 12px; border-radius: 12px; font-size: .85rem;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .msg.user .body {
+      background: rgba(29,155,240,.18); border: 1px solid rgba(29,155,240,.3);
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant .body {
+      background: var(--card); border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg .tools {
+      margin-top: 6px; font-size: .7rem; color: var(--muted);
+      font-family: ui-monospace, Consolas, monospace;
+    }
+    .chat-compose { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-compose textarea { min-height: 48px; flex: 1; font-family: inherit; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+    .chip {
+      border: 1px solid var(--border); background: var(--elevated); color: var(--text);
+      border-radius: 999px; padding: 5px 10px; font-size: .72rem; font-weight: 650; cursor: pointer;
+    }
+    .chip:hover { border-color: rgba(29,155,240,.5); color: #9fd4ff; }
+    .auth-box { max-width: 420px; margin: 40px auto; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .tabs button { flex: 1; }
+    .tabs button.active { background: rgba(29,155,240,.15); border-color: rgba(29,155,240,.4); color: #9fd4ff; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">X<span>A</span></div>
+        <div>
+          <h1>Operator Console</h1>
+          <div class="sub">Phase A · sessions + operations · backend SaaS</div>
+        </div>
+      </div>
+      <div class="pill" id="apiPill">API …</div>
+    </header>
+
+    <!-- AUTH -->
+    <section id="panelAuth" class="auth-box card">
+      <h2>Đăng nhập operator</h2>
+      <div class="tabs">
+        <button type="button" class="btn-secondary active" data-auth-tab="login">Login</button>
+        <button type="button" class="btn-secondary" data-auth-tab="register">Register</button>
+      </div>
+      <div id="authLogin">
+        <label>Username</label>
+        <input id="loginUser" placeholder="operator" autocomplete="username" />
+        <label>Password</label>
+        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        <div class="row">
+          <button type="button" class="btn-primary" id="btnLogin">Login</button>
+        </div>
+        <p class="hint">Seed: user <code>operator</code> · password từ <code>OPERATOR_PASSWORD</code> (mặc định <code>operator-change-me</code>)</p>
+      </div>
+      <div id="authRegister" class="hidden">
+        <label>Username</label>
+        <input id="regUser" placeholder="my_user" />
+        <label>Password (min 8)</label>
+        <input id="regPass" type="password" />
+        <label>Email (optional)</label>
+        <input id="regEmail" type="email" placeholder="you@example.com" />
+        <div class="row">
+          <button type="button" class="btn-primary" id="btnRegister">Create account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- APP -->
+    <section id="panelApp" class="hidden">
+      <div class="row" style="margin-bottom:14px;justify-content:space-between">
+        <div class="sub">Logged in as <strong id="whoami">—</strong></div>
+        <button type="button" class="btn-ghost" id="btnLogout">Logout</button>
+      </div>
+
+      <!-- AI Agent chat (Phase B) -->
+      <div class="card chat-card">
+        <h2>✨ AI Agent <em>backend · tools → Operation</em></h2>
+        <div class="chips">
+          <button type="button" class="chip" data-prompt="Liệt kê session X và operation types có sẵn.">List sessions & types</button>
+          <button type="button" class="chip" data-prompt="Enqueue detectUnfollowers dryRun true maxUsers 20.">Detect unfollowers (dry)</button>
+          <button type="button" class="chip" data-prompt="Draft a short tweet about shipping with AI agents.">Draft tweet</button>
+          <button type="button" class="chip" data-prompt="Show my last 5 operations and their status.">Last ops</button>
+        </div>
+        <div class="chat-log" id="chatLog">
+          <div class="meta" id="chatEmpty">Chat với assistant server. Cần <code>XAI_API_KEY</code> (hoặc OpenRouter/OpenAI) trên backend.</div>
+        </div>
+        <div class="chat-compose">
+          <textarea id="chatInput" rows="2" placeholder="Nhắn agent… (Enter gửi, Shift+Enter xuống dòng)"></textarea>
+          <button type="button" class="btn-primary" id="btnChatSend">Gửi</button>
+        </div>
+        <p class="hint">Thread: <code id="threadIdLabel">new</code> · model env <code>AGENT_LLM_MODEL</code> / <code>XAI_API_KEY</code></p>
+      </div>
+
+      <div class="grid grid-2">
+        <!-- Sessions -->
+        <div class="card">
+          <h2>🔐 X Session <em>encrypted</em></h2>
+          <label>auth_token cookie (hoặc full cookie string)</label>
+          <textarea id="cookieInput" placeholder="auth_token=...; ct0=..."></textarea>
+          <label>X username (optional)</label>
+          <input id="xUsername" placeholder="your_handle" />
+          <label>Label</label>
+          <input id="xLabel" value="primary" />
+          <div class="row">
+            <button type="button" class="btn-primary" id="btnSaveSession">Lưu session</button>
+            <button type="button" class="btn-secondary" id="btnRefreshSessions">Refresh</button>
+          </div>
+          <p class="hint">Cookie chỉ gửi HTTPS/local API · lưu AES-GCM trên server · UI không đọc lại plaintext.</p>
+          <div class="list" id="sessionList"></div>
+        </div>
+
+        <!-- Run op -->
+        <div class="card">
+          <h2>▶ Chạy operation</h2>
+          <label>Type</label>
+          <select id="opType">
+            <option value="detectUnfollowers">detectUnfollowers</option>
+            <option value="unfollowNonFollowers">unfollowNonFollowers</option>
+            <option value="unfollowEveryone">unfollowEveryone</option>
+            <option value="autoLike">autoLike</option>
+            <option value="keywordFollow">keywordFollow</option>
+            <option value="followEngagers">followEngagers</option>
+            <option value="autoComment">autoComment</option>
+          </select>
+          <label>Session</label>
+          <select id="opSession"><option value="">Latest active</option></select>
+          <label>dryRun</label>
+          <select id="opDryRun">
+            <option value="true" selected>true (an toàn)</option>
+            <option value="false">false</option>
+          </select>
+          <label>maxUnfollows / maxUsers</label>
+          <input id="opMax" type="number" value="10" min="1" max="500" />
+          <div class="row">
+            <button type="button" class="btn-primary" id="btnRunOp">Enqueue job</button>
+          </div>
+          <p class="hint">Job vào <code>Operation</code> + Bull queue · cần worker/Redis + cookie hợp lệ để chạy thật.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h2>📋 Operations
+          <em id="opCount"></em>
+          <button type="button" class="btn-secondary" id="btnRefreshOps" style="margin-left:auto;font-size:.75rem;padding:5px 10px">Refresh</button>
+        </h2>
+        <div class="list" id="opList"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3001/api'
+      : '/api';
+
+    const $ = (s) => document.querySelector(s);
+    const state = {
+      token: localStorage.getItem('authToken') || '',
+      user: null,
+      threadId: localStorage.getItem('agentThreadId') || null,
+    };
+
+    function toast(msg, ok = true) {
+      const el = $('#toast');
+      el.textContent = msg;
+      el.className = 'toast show ' + (ok ? 'ok' : 'err');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.className = 'toast'; }, 3200);
+    }
+
+    async function api(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (state.token) headers.Authorization = 'Bearer ' + state.token;
+      const res = await fetch(API + path, { ...opts, headers });
+      let data = null;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok) {
+        const err = new Error(data.error || data.message || res.statusText || 'Request failed');
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    }
+
+    function setAuthUi(loggedIn) {
+      $('#panelAuth').classList.toggle('hidden', loggedIn);
+      $('#panelApp').classList.toggle('hidden', !loggedIn);
+      $('#apiPill').textContent = loggedIn ? 'API · ' + API : 'API · ' + API;
+      $('#apiPill').classList.toggle('on', loggedIn);
+    }
+
+    async function afterLogin(data) {
+      state.token = data.token;
+      state.user = data.user;
+      localStorage.setItem('authToken', data.token);
+      if (data.user) localStorage.setItem('authUser', JSON.stringify(data.user));
+      $('#whoami').textContent = data.user?.username || 'user';
+      setAuthUi(true);
+      await Promise.all([refreshSessions(), refreshOps()]);
+      toast('Đăng nhập OK');
+    }
+
+    // Auth tabs
+    document.querySelectorAll('[data-auth-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-auth-tab]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.authTab;
+        $('#authLogin').classList.toggle('hidden', tab !== 'login');
+        $('#authRegister').classList.toggle('hidden', tab !== 'register');
+      });
+    });
+
+    $('#btnLogin').onclick = async () => {
+      try {
+        const data = await api('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            identifier: $('#loginUser').value.trim(),
+            password: $('#loginPass').value,
+          }),
+        });
+        await afterLogin(data);
+      } catch (e) {
+        toast(e.message || e.data?.error || 'Login failed', false);
+      }
+    };
+
+    $('#btnRegister').onclick = async () => {
+      try {
+        const data = await api('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: $('#regUser').value.trim(),
+            password: $('#regPass').value,
+            email: $('#regEmail').value.trim() || undefined,
+          }),
+        });
+        await afterLogin(data);
+      } catch (e) {
+        toast(e.message || 'Register failed', false);
+      }
+    };
+
+    $('#btnLogout').onclick = () => {
+      state.token = '';
+      state.user = null;
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+      setAuthUi(false);
+      toast('Logged out');
+    };
+
+    async function refreshSessions() {
+      const data = await api('/sessions');
+      const list = $('#sessionList');
+      const sel = $('#opSession');
+      const sessions = data.sessions || [];
+      list.innerHTML = sessions.length
+        ? sessions.map((s) => `
+          <div class="item" data-id="${s.id}">
+            <div>
+              <strong>${escapeHtml(s.label || 'session')}</strong>
+              ${s.username ? '@' + escapeHtml(s.username) : ''}
+              <div class="meta">${escapeHtml(s.status)} · ${s.id.slice(0, 8)}… · ${fmtDate(s.createdAt)}</div>
+            </div>
+            <div class="row" style="margin:0">
+              <span class="badge ${s.status}">${escapeHtml(s.status)}</span>
+              <button type="button" class="btn-danger" data-del="${s.id}" style="padding:4px 10px;font-size:.72rem">Xóa</button>
+            </div>
+          </div>`).join('')
+        : '<div class="meta">Chưa có session — dán cookie và lưu.</div>';
+
+      sel.innerHTML = '<option value="">Latest active</option>' +
+        sessions.map((s) => `<option value="${s.id}">${escapeHtml(s.label)} ${s.username ? '@' + escapeHtml(s.username) : ''}</option>`).join('');
+
+      list.querySelectorAll('[data-del]').forEach((btn) => {
+        btn.onclick = async () => {
+          if (!confirm('Revoke session? Cookie bị xóa vĩnh viễn.')) return;
+          try {
+            await api('/sessions/' + btn.dataset.del, { method: 'DELETE' });
+            toast('Session revoked');
+            await refreshSessions();
+          } catch (e) { toast(e.message, false); }
+        };
+      });
+    }
+
+    $('#btnSaveSession').onclick = async () => {
+      try {
+        await api('/sessions', {
+          method: 'POST',
+          body: JSON.stringify({
+            sessionCookie: $('#cookieInput').value.trim(),
+            username: $('#xUsername').value.trim() || undefined,
+            label: $('#xLabel').value.trim() || 'primary',
+          }),
+        });
+        $('#cookieInput').value = '';
+        toast('Session encrypted & saved');
+        await refreshSessions();
+      } catch (e) { toast(e.message, false); }
+    };
+    $('#btnRefreshSessions').onclick = () => refreshSessions().catch((e) => toast(e.message, false));
+
+    async function refreshOps() {
+      const data = await api('/operations?limit=30');
+      const ops = data.operations || [];
+      $('#opCount').textContent = ops.length ? `(${data.pagination?.total ?? ops.length})` : '';
+      $('#opList').innerHTML = ops.length
+        ? ops.map((o) => `
+          <div class="item">
+            <div>
+              <strong>${escapeHtml(o.type)}</strong>
+              <div class="meta">${o.id.slice(0, 10)}… · ${fmtDate(o.createdAt)}${o.sessionId ? ' · sess ' + o.sessionId.slice(0, 6) : ''}</div>
+              ${o.error ? `<div class="meta" style="color:#ff8b92">${escapeHtml(o.error)}</div>` : ''}
+            </div>
+            <span class="badge ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span>
+          </div>`).join('')
+        : '<div class="meta">Chưa có operation.</div>';
+    }
+
+    $('#btnRefreshOps').onclick = () => refreshOps().catch((e) => toast(e.message, false));
+
+    $('#btnRunOp').onclick = async () => {
+      const type = $('#opType').value;
+      const sessionId = $('#opSession').value || undefined;
+      const dryRun = $('#opDryRun').value === 'true';
+      const max = Number($('#opMax').value) || 10;
+      const config = { dryRun, maxUnfollows: max, maxUsers: max };
+      try {
+        const res = await api('/operations', {
+          method: 'POST',
+          body: JSON.stringify({ type, sessionId, config }),
+        });
+        toast('Queued ' + (res.operationId || '').slice(0, 12));
+        await refreshOps();
+      } catch (e) { toast(e.message, false); }
+    };
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+    function fmtDate(d) {
+      if (!d) return '—';
+      try { return new Date(d).toLocaleString(); } catch { return String(d); }
+    }
+
+    // ── Chat ─────────────────────────────────────────────
+    function appendChat(role, content, toolTrace) {
+      const empty = $('#chatEmpty');
+      if (empty) empty.remove();
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      let toolsHtml = '';
+      if (toolTrace?.length) {
+        toolsHtml = `<div class="tools">${toolTrace.map((t) =>
+          `🔧 ${escapeHtml(t.name)} → ${escapeHtml(JSON.stringify(t.result).slice(0, 180))}`
+        ).join('<br>')}</div>`;
+      }
+      div.innerHTML = `<div class="role">${role === 'user' ? 'You' : 'Agent'}</div>
+        <div class="body">${escapeHtml(content || '')}</div>${toolsHtml}`;
+      $('#chatLog').appendChild(div);
+      $('#chatLog').scrollTop = $('#chatLog').scrollHeight;
+    }
+
+    async function sendChat(text) {
+      const message = (text || $('#chatInput').value || '').trim();
+      if (!message) return;
+      $('#chatInput').value = '';
+      appendChat('user', message);
+      const btn = $('#btnChatSend');
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const res = await api('/agent/chat', {
+          method: 'POST',
+          body: JSON.stringify({
+            message,
+            threadId: state.threadId || undefined,
+          }),
+        });
+        if (res.threadId) {
+          state.threadId = res.threadId;
+          localStorage.setItem('agentThreadId', res.threadId);
+          $('#threadIdLabel').textContent = res.threadId.slice(0, 12) + '…';
+        }
+        appendChat('assistant', res.content || res.error || '(empty)', res.toolTrace);
+        if (res.operationIds?.length) {
+          toast('Ops: ' + res.operationIds.map((id) => id.slice(0, 8)).join(', '));
+          await refreshOps();
+        }
+      } catch (e) {
+        appendChat('assistant', e.message || 'Chat failed');
+        toast(e.message, false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Gửi';
+      }
+    }
+
+    $('#btnChatSend').onclick = () => sendChat();
+    $('#chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+    document.querySelectorAll('.chip[data-prompt]').forEach((c) => {
+      c.onclick = () => sendChat(c.dataset.prompt);
+    });
+
+    // Boot
+    (async () => {
+      $('#apiPill').textContent = 'API · ' + API;
+      if (state.threadId) {
+        $('#threadIdLabel').textContent = state.threadId.slice(0, 12) + '…';
+      }
+      if (state.token) {
+        try {
+          // light probe
+          await api('/sessions');
+          const u = JSON.parse(localStorage.getItem('authUser') || 'null');
+          state.user = u;
+          $('#whoami').textContent = u?.username || 'user';
+          setAuthUi(true);
+          await Promise.all([refreshSessions(), refreshOps()]);
+          // restore thread messages if any
+          if (state.threadId) {
+            try {
+              const th = await api('/agent/threads/' + state.threadId);
+              const log = $('#chatLog');
+              log.innerHTML = '';
+              (th.thread?.messages || []).forEach((m) => {
+                if (m.role === 'user' || m.role === 'assistant') {
+                  appendChat(m.role, m.content, m.toolTrace);
+                }
+              });
+              if (!th.thread?.messages?.length) {
+                log.innerHTML = '<div class="meta" id="chatEmpty">Chat với assistant server.</div>';
+              }
+            } catch {
+              state.threadId = null;
+              localStorage.removeItem('agentThreadId');
+            }
+          }
+        } catch {
+          localStorage.removeItem('authToken');
+          state.token = '';
+          setAuthUi(false);
+        }
+      } else {
+        setAuthUi(false);
+      }
+    })();
+  </script>
+</body>
+</html>

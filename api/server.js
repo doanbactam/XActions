@@ -55,6 +55,8 @@ import automationsRoutes from './routes/automations.js';
 import analyticsRoutes from './routes/analytics.js';
 import workflowRoutes from './routes/workflows.js';
 import agentRoutes from './routes/agent.js';
+import assistantChatRoutes from './routes/assistantChat.js';
+import sessionsRoutes from './routes/sessions.js';
 import portabilityRoutes from './routes/portability.js';
 import graphRoutes from './routes/graph.js';
 import threadRoutes from './routes/thread.js';
@@ -284,6 +286,7 @@ app.use('/api/billing', billingRoutes); // Stripe subscription management
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/operations', operationRoutes);
+app.use('/api/sessions', sessionsRoutes); // Phase A: encrypted XSession CRUD
 app.use('/api/twitter', twitterRoutes);
 app.use('/api/session', sessionAuthRoutes);
 app.use('/api/license', licenseRoutes);
@@ -305,6 +308,9 @@ app.use('/api/graph', graphRoutes);
 app.use('/api/unfollowers', unfollowersRoutes);
 app.use('/api/thread', threadRoutes);
 app.use('/api/video', videoRoutes);
+// Phase B assistant chat first (so /chat is not shadowed)
+app.use('/api/agent', assistantChatRoutes);
+// Legacy thought-leader growth agent
 app.use('/api/agent', agentRoutes);
 // Competitive feature routes (09-A through 09-P)
 app.use('/api/analytics', historyRoutes); // history, growth, overlap endpoints augment existing analytics
@@ -424,6 +430,11 @@ app.get('/login', (req, res) => {
 
 app.get('/run', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/run.html'));
+});
+
+// Phase A operator console — sessions + operations try UI
+app.get('/operator', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/operator.html'));
 });
 
 app.get('/tutorials', (req, res) => {

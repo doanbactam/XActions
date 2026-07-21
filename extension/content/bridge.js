@@ -85,6 +85,14 @@
           data: msg.data,
         });
         break;
+
+      case 'AGENT_TOOL_RESULT':
+        chrome.runtime.sendMessage({
+          type: 'AGENT_TOOL_RESULT',
+          requestId: msg.requestId,
+          result: msg.result,
+        });
+        break;
     }
   });
 
@@ -144,6 +152,20 @@
 
       case 'PING':
         sendResponse({ pong: true });
+        break;
+
+      case 'AGENT_TOOL':
+        window.postMessage(
+          {
+            source: 'xactions-extension',
+            type: 'AGENT_TOOL',
+            requestId: message.requestId,
+            tool: message.tool,
+            args: message.args || {},
+          },
+          '*',
+        );
+        sendResponse({ success: true, forwarded: true });
         break;
 
       default:

@@ -140,3 +140,7 @@ pages-out/
 *.bak
 *.orig
 *.rej
+
+# Local Postgres data (dev)
+.pgdata/
+

@@ -1,0 +1,11 @@
+{
+  "name": "xactions-extension",
+  "version": "1.4.0",
+  "private": true,
+  "description": "XActions Chrome MV3 extension — AI Strategist + automations on x.com",
+  "scripts": {
+    "build": "node build.cjs",
+    "check": "node build.cjs --check-only",
+    "dev": "node build.cjs --check-only"
+  }
+}

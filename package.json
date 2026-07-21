@@ -36,16 +36,21 @@
   },
   "scripts": {
     "vercel-build": "prisma generate",
-    "dev": "NODE_ENV=development nodemon api/server.js",
-    "start": "NODE_ENV=production node api/server.js",
+    "dev": "nodemon --exec \"node --env-file=.env\" api/server.js",
+    "dev:unix": "NODE_ENV=development nodemon api/server.js",
+    "start": "node --env-file=.env api/server.js",
     "cli": "node src/cli/index.js",
     "mcp": "node src/mcp/server.js",
+    "extension:build": "npm --prefix extension run build",
+    "extension:dev": "npm --prefix extension run dev",
     "worker": "node api/services/jobQueue.js",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
     "test": "vitest run",
+    "test:phase-a": "node --test tests/api/sessionCrypto.test.js tests/docs/saas-backend-agent-design.test.js",
+    "test:phase-b": "node --test tests/api/agentTools.test.js tests/api/sessionCrypto.test.js",
     "test:watch": "vitest",
     "test:x402": "vitest run tests/x402.test.js",
     "test:x402:integration": "vitest run tests/x402-integration.test.js",
@@ -137,6 +142,9 @@
     "twitter": "@nichxbt"
   },
   "license": "SEE LICENSE IN LICENSE",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "keywords": [
     "xactions",
     "twitter",

@@ -1,6 +1,69 @@
 # XActions Browser Extension
 
-> Run XActions automations on X/Twitter directly from your browser toolbar. No console access needed. Dark-themed popup with 11 automation cards, live dashboard, category filtering, search, progress tracking, and keyboard shortcuts.
+> **Product surface chính (extension-first):** automation + AI Agent chạy **trên tab x.com đã login**.  
+> **Không cần dán cookie**, không cần CLI, không cần backend Postgres để dùng hằng ngày.
+
+## Session X = gì?
+
+| | Extension | Operator web `/operator` (backend) |
+|---|---|---|
+| Session X | Cookie **browser** — bạn đã login x.com | Phải **dán** `auth_token` lên server |
+| Cách “lấy session” | Mở x.com → login → xong | Copy cookie DevTools → POST /api/sessions |
+| Automation | DOM trên tab hiện tại | Puppeteer worker + cookie encrypt |
+
+**Tập trung extension:** chỉ cần **đăng nhập x.com trong Chrome**.
+
+## Cài (Load unpacked)
+
+1. `chrome://extensions` → **Developer mode**
+2. **Load unpacked** → folder:
+
+```
+D:\Project\XActions\extension
+```
+
+3. Mở **https://x.com** (đã login) → bấm icon **XA**
+4. Pill **Live** = connected; **Offline** = chưa tab x.com
+
+## AI Strategist (Grok) — **phân tích → kịch bản → chạy** (v1.3 hardened)
+
+Tab **Agent** ưu tiên **Strategist**, không phải chat-first:
+
+1. **Phân tích** — scrape profile / tweets / engagement / home feed (SW nền + notification)  
+2. **Đối tượng + phong cách** — Grok chẩn đoán niche, voice, ICP  
+3. **Kịch bản** — allowlist tools only; deny block/delete/post; auto `x_stop_all`  
+4. **Chạy** — tick từng bước · Force cho ⚠️ · unfollow `dryRun`  
+5. **Chat** — nhận playbook context trong system prompt  
+
+Safety: `PLAYBOOK_ALLOWLIST` / `DENYLIST` · handle từ Account Switcher (không nhầm `/home`).  
+Module: `agent/strategist.js` · SW: `AGENT_RUN_STRATEGY` / `AGENT_EXECUTE_PLAYBOOK` / `AGENT_UPDATE_STEPS`.
+
+| Kind | Ví dụ | Ghi chú |
+|---|---|---|
+| **page** | like/follow/scrape/analytics | DOM trong `injected.js` |
+| **auto** | `x_start_*` / stop | SW → bridge → automation runners |
+| **llm** | draft, summarize, hashtags | Grok OAuth / API |
+| **config** | persona, safety, `x_list_tools`, ping | chrome.storage |
+
+**Navigate an toàn:** `x_go_*` / `x_navigate` / `x_refresh_page` chạy qua **service worker** (`chrome.tabs.update`) — không kill content script.
+
+Catalog: `agent/catalog.js` · Executor: `agent/tools.js` · DOM: `content/injected.js` · SW: `background/service-worker.js`.
+
+### Auth Grok (không phải cookie X)
+
+| | |
+|---|---|
+| Provider | **Grok (xAI OAuth)** — không API key |
+| Model | `grok-4.5` |
+| Setup | Agent → ⚙️ → **Login with xAI** → approve → Test → chat |
+| Cần | SuperGrok hoặc X Premium+ |
+
+Hai lớp login:
+
+1. **x.com** — session Twitter (browser)  
+2. **xAI OAuth** — quyền gọi Grok LLM  
+
+Modules: `agent/xai-oauth.js`, `agent/llm.js`, `agent/tools.js`, `agent/agent-core.js`.
 
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-✓-green)

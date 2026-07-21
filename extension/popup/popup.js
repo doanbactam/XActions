@@ -67,6 +67,10 @@
     setupGlobalControls();
     setupSettings();
     setupLogFilter();
+    window.XActionsPopupToast = showToast;
+    if (window.XActionsAgentUI?.setupAgentUi) {
+      window.XActionsAgentUI.setupAgentUi();
+    }
     await loadState();
     await checkConnection();
     await checkFirstRun();
@@ -95,12 +99,30 @@
   function setupTabs() {
     $$('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        $$('.tab').forEach(t => t.classList.remove('active'));
+        $$('.tab').forEach(t => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
         $$('.tab-content').forEach(tc => tc.classList.remove('active'));
         tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
         $(`#tab-${tab.dataset.tab}`).classList.add('active');
       });
     });
+  }
+
+  function setConnectionUi(connected) {
+    const el = DOM.connectionStatus;
+    if (!el) return;
+    el.className = `status-pill ${connected ? 'connected' : 'disconnected'}`;
+    el.title = connected ? 'Connected to X' : 'Not on X — open x.com';
+    const label = el.querySelector('.status-label');
+    if (label) label.textContent = connected ? 'Live' : 'Offline';
+    const badge = $('#accountBadge');
+    if (badge) {
+      badge.textContent = connected ? 'Ready' : '—';
+      badge.className = `account-badge ${connected ? 'on' : ''}`;
+    }
   }
 
   // ============================================
@@ -449,7 +471,7 @@
 
   function updatePauseButton() {
     if (globalPaused) {
-      DOM.btnPauseResume.textContent = '▶️';
+      DOM.btnPauseResume.textContent = '▶';
       DOM.btnPauseResume.title = 'Resume All (Ctrl+Shift+P)';
       DOM.btnPauseResume.classList.add('paused');
     } else {
@@ -564,16 +586,14 @@
       const isXTab = tab?.url && (tab.url.includes('x.com') || tab.url.includes('twitter.com'));
 
       if (isXTab) {
-        DOM.connectionStatus.className = 'status-dot connected';
-        DOM.connectionStatus.title = 'Connected to X';
+        setConnectionUi(true);
         DOM.disconnectedBanner.classList.add('hidden');
 
         try {
           await chrome.tabs.sendMessage(tab.id, { type: 'GET_ACCOUNT_INFO' });
         } catch { /* content script not ready */ }
       } else {
-        DOM.connectionStatus.className = 'status-dot disconnected';
-        DOM.connectionStatus.title = 'Not on X — open x.com';
+        setConnectionUi(false);
         DOM.accountName.textContent = 'Not on X';
         DOM.accountHandle.textContent = 'Open x.com to use automations';
         DOM.disconnectedBanner.classList.remove('hidden');

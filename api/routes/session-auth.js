@@ -1,58 +1,28 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
 import express from 'express';
-import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
 import browserAutomation from '../services/browserAutomation.js';
+import {
+  encryptSessionSecret,
+  decryptSessionSecret,
+} from '../utils/sessionCrypto.js';
+import { createSession } from '../services/xSessionService.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Encryption helpers for session cookies
-const ENCRYPTION_KEY = process.env.SESSION_SECRET || process.env.JWT_SECRET;
-if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
-  console.error('❌ SESSION_SECRET or JWT_SECRET must be set in production');
-  process.exit(1);
-}
-const ALGORITHM = 'aes-256-gcm';
-
-function encrypt(text) {
-  const salt = crypto.randomBytes(16);
-  const key = crypto.scryptSync(ENCRYPTION_KEY || 'dev-only-key', salt, 32);
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag();
-  return salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
-}
-
-function decrypt(encryptedData) {
+// Back-compat aliases → Phase A sessionCrypto
+const encrypt = (text) => encryptSessionSecret(text);
+const decrypt = (encryptedData) => {
   try {
-    const parts = encryptedData.split(':');
-    // Support both old format (3 parts) and new format (4 parts with salt)
-    if (parts.length === 4) {
-      const salt = Buffer.from(parts[0], 'hex');
-      const key = crypto.scryptSync(ENCRYPTION_KEY || 'dev-only-key', salt, 32);
-      const iv = Buffer.from(parts[1], 'hex');
-      const authTag = Buffer.from(parts[2], 'hex');
-      const encrypted = parts[3];
-      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-      decipher.setAuthTag(authTag);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return decrypted;
-    }
-    // Legacy format (3 parts, hardcoded salt) is no longer supported.
-    // Data encrypted with the old format must be re-encrypted.
-    console.warn('⚠️  Encountered legacy encryption format — re-save to upgrade');
-    return null;
+    return decryptSessionSecret(encryptedData);
   } catch (error) {
     console.error('❌ Decryption error:', error.message);
     return null;
   }
-}
+};
 
 // Save session cookie for browser automation
 router.post('/save-session',
@@ -81,20 +51,17 @@ router.post('/save-session',
         });
       }
 
-      // Save encrypted session cookie to user record
-      const encryptedCookie = encrypt(sessionCookie);
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          sessionCookie: encryptedCookie,
-          twitterUsername: username || null,
-          authMethod: 'session' // Track which method user prefers
-        }
+      // Phase A: store in XSession (encrypted) + legacy User field sync
+      const publicSession = await createSession(req.user.id, {
+        sessionCookie,
+        username: username || null,
+        label: 'primary',
       });
 
-      res.json({ 
+      res.json({
         message: 'Session saved successfully',
-        authMethod: 'session'
+        authMethod: 'session',
+        session: publicSession,
       });
     } catch (error) {
       console.error('❌ Save session error:', error.message);

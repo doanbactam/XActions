@@ -12,13 +12,19 @@
   <!-- ============================================ -->
   <header id="header">
     <div class="header-left">
-      <div class="logo">X<span class="accent">A</span></div>
-      <div class="header-title">XActions</div>
+      <div class="logo" aria-hidden="true">X<span class="accent">A</span></div>
+      <div class="header-brand">
+        <div class="header-title">XActions</div>
+        <div class="header-sub" id="headerSub">Plan · tab x.com đã login</div>
+      </div>
     </div>
     <div class="header-right">
-      <div id="connectionStatus" class="status-dot disconnected" title="Not connected to X"></div>
-      <button id="btnPauseResume" class="btn-pause" title="Pause All (Ctrl+Shift+P)">⏸</button>
-      <button id="btnEmergencyStop" class="btn-emergency" title="Emergency Stop All (Ctrl+Shift+S)">⏹</button>
+      <div id="connectionStatus" class="status-pill disconnected" title="Not connected to X">
+        <span class="status-dot"></span>
+        <span class="status-label">Offline</span>
+      </div>
+      <button id="btnPauseResume" class="icon-btn" title="Pause All (Ctrl+Shift+P)" aria-label="Pause">⏸</button>
+      <button id="btnEmergencyStop" class="icon-btn icon-btn-danger" title="Emergency Stop (Ctrl+Shift+S)" aria-label="Stop all">⏹</button>
     </div>
   </header>
 
@@ -28,9 +34,9 @@
   <div id="disconnectedBanner" class="disconnected-banner hidden">
     <div class="disconnected-content">
       <span class="disconnected-icon">🔗</span>
-      <div>
-        <div class="disconnected-title">Not connected to X</div>
-        <div class="disconnected-desc">Open <a href="https://x.com" target="_blank">x.com</a> in a tab to start using automations</div>
+      <div class="disconnected-text">
+        <div class="disconnected-title">Cần tab x.com đã login</div>
+        <div class="disconnected-desc">Session X = cookie browser (không dán token). Mở <a href="https://x.com" target="_blank" rel="noreferrer">x.com</a> rồi bấm lại XA.</div>
       </div>
     </div>
   </div>
@@ -41,29 +47,216 @@
   <!-- ============================================ -->
   <!-- ACCOUNT INFO -->
   <!-- ============================================ -->
-  <section id="accountInfo" class="section">
+  <section id="accountInfo" class="section section-account">
     <div class="account-card">
       <div class="account-avatar" id="accountAvatar">?</div>
       <div class="account-details">
         <div class="account-name" id="accountName">Connect to X</div>
         <div class="account-handle" id="accountHandle">Open x.com to get started</div>
       </div>
+      <div class="account-badge" id="accountBadge">—</div>
     </div>
   </section>
 
   <!-- ============================================ -->
   <!-- TAB NAVIGATION -->
   <!-- ============================================ -->
-  <nav class="tabs">
-    <button class="tab active" data-tab="automations">Automations</button>
-    <button class="tab" data-tab="activity">Activity</button>
-    <button class="tab" data-tab="settings">Settings</button>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="agent" role="tab" aria-selected="true">
+      <span class="tab-icon">◈</span><span class="tab-text">Plan</span>
+    </button>
+    <button class="tab" data-tab="automations" role="tab" aria-selected="false">
+      <span class="tab-icon">⚡</span><span class="tab-text">Auto</span>
+    </button>
+    <button class="tab" data-tab="activity" role="tab" aria-selected="false">
+      <span class="tab-icon">☰</span><span class="tab-text">Log</span>
+    </button>
+    <button class="tab" data-tab="settings" role="tab" aria-selected="false">
+      <span class="tab-icon">⚙</span><span class="tab-text">Cài đặt</span>
+    </button>
   </nav>
+
+  <!-- ============================================ -->
+  <!-- PLAN / STRATEGIST TAB (default) -->
+  <!-- ============================================ -->
+  <section id="tab-agent" class="tab-content tab-agent active">
+    <div class="agent-shell">
+      <!-- Status strip -->
+      <div class="plan-status-strip">
+        <div class="plan-status-main">
+          <span class="plan-status-label">Strategist</span>
+          <span class="plan-status-line" id="agentStatusLine">Sẵn sàng phân tích</span>
+        </div>
+        <div class="plan-status-actions">
+          <button type="button" id="btnAgentConfig" class="btn-quiet" title="Grok & persona">Grok</button>
+          <button type="button" id="btnAgentClear" class="btn-quiet" title="Xóa chat">Clear</button>
+        </div>
+      </div>
+
+      <!-- Pipeline steps -->
+      <ol class="plan-pipeline" id="planPipeline" aria-label="Các bước kế hoạch">
+        <li class="plan-pipe" data-stage="setup" id="pipeSetup">
+          <span class="pipe-num">1</span>
+          <span class="pipe-label">Grok</span>
+        </li>
+        <li class="plan-pipe" data-stage="analyze" id="pipeAnalyze">
+          <span class="pipe-num">2</span>
+          <span class="pipe-label">Phân tích</span>
+        </li>
+        <li class="plan-pipe" data-stage="playbook" id="pipePlaybook">
+          <span class="pipe-num">3</span>
+          <span class="pipe-label">Kịch bản</span>
+        </li>
+        <li class="plan-pipe" data-stage="run" id="pipeRun">
+          <span class="pipe-num">4</span>
+          <span class="pipe-label">Chạy</span>
+        </li>
+      </ol>
+
+      <!-- Config / OAuth (collapsible) -->
+      <div id="agentConfigPanel" class="agent-config hidden">
+        <div class="agent-xai-banner">
+          <div class="agent-xai-banner-title">Hai lớp đăng nhập</div>
+          <div class="agent-xai-banner-desc">x.com = cookie trình duyệt · Grok = OAuth xAI (SuperGrok / Premium+)</div>
+        </div>
+        <div class="agent-oauth-box">
+          <div class="agent-oauth-status" id="agentOauthStatus">Đang kiểm tra…</div>
+          <div class="agent-oauth-actions">
+            <button type="button" id="btnXaiLogin" class="btn-primary btn-block">Đăng nhập xAI</button>
+            <button type="button" id="btnXaiLogout" class="btn-secondary hidden">Đăng xuất</button>
+            <button type="button" id="btnAgentTest" class="btn-secondary">Test Grok</button>
+          </div>
+          <div id="agentOauthDevice" class="agent-oauth-device hidden">
+            <div class="agent-code-label">Mã xác nhận</div>
+            <div class="agent-user-code" id="agentUserCode">————</div>
+            <div class="agent-oauth-hint">Duyệt quyền trên tab trình duyệt…</div>
+            <a id="agentVerifyLink" class="btn-link" href="#" target="_blank" rel="noreferrer">Mở trang login →</a>
+          </div>
+          <div id="agentTestResult" class="agent-test-result"></div>
+        </div>
+        <details class="agent-advanced">
+          <summary>Model & persona</summary>
+          <div class="agent-advanced-body">
+            <label class="field">
+              <span class="field-label">Provider</span>
+              <select id="agentProvider">
+                <option value="xai-oauth" selected>Grok (xAI OAuth)</option>
+                <option value="xai">Grok (API key)</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+                <option value="ollama">Ollama</option>
+              </select>
+            </label>
+            <label class="field hidden" id="agentApiKeyWrap">
+              <span class="field-label">API key</span>
+              <input type="password" id="agentApiKey" placeholder="Optional" autocomplete="off">
+            </label>
+            <label class="field">
+              <span class="field-label">Model</span>
+              <select id="agentModelSelect">
+                <option value="grok-4.5" selected>grok-4.5</option>
+                <option value="grok-4-5-medium">grok-4-5-medium → 4.5</option>
+                <option value="grok-4.3">grok-4.3</option>
+                <option value="grok-build-0.1">grok-build-0.1</option>
+                <option value="custom">Custom…</option>
+              </select>
+            </label>
+            <label class="field hidden" id="agentModelCustomWrap">
+              <span class="field-label">Custom model</span>
+              <input type="text" id="agentModel" placeholder="grok-4.5" value="grok-4.5">
+            </label>
+            <label class="field">
+              <span class="field-label">Base URL</span>
+              <input type="text" id="agentBaseUrl" placeholder="optional">
+            </label>
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">Persona</span>
+                <input type="text" id="agentPersonaName" placeholder="XActions">
+              </label>
+              <label class="field">
+                <span class="field-label">Niche</span>
+                <input type="text" id="agentPersonaNiche" placeholder="AI / SaaS">
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">Tone</span>
+              <input type="text" id="agentPersonaTone" placeholder="rõ ràng, quyết đoán">
+            </label>
+            <label class="field">
+              <span class="field-label">Expertise</span>
+              <input type="text" id="agentPersonaExpertise" placeholder="growth, content">
+            </label>
+            <label class="field">
+              <span class="field-label">Avoid</span>
+              <input type="text" id="agentPersonaAvoid" placeholder="spam, bait">
+            </label>
+            <label class="field">
+              <span class="field-label">Max actions / tool</span>
+              <input type="number" id="agentMaxActions" value="20" min="1" max="50">
+            </label>
+            <button type="button" id="btnAgentSaveConfig" class="btn-secondary btn-block">Lưu cài đặt</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Analyze hero -->
+      <section class="plan-analyze" id="planAnalyzeBlock">
+        <div class="plan-analyze-copy">
+          <h2 class="plan-h2">Phân tích & lên kịch bản</h2>
+          <p class="plan-lead">Grok đọc profile, feed, phong cách và nhóm đối tượng trên tab x.com — rồi lập bước chạy an toàn.</p>
+        </div>
+        <button type="button" id="btnRunStrategy" class="btn-primary btn-block plan-cta">
+          Bắt đầu phân tích
+        </button>
+        <p class="plan-hint" id="agentStrategyHint">Chạy nền · đóng popup vẫn xong · có thông báo</p>
+        <div class="plan-progress" id="agentStrategyProgress" role="status" aria-live="polite"></div>
+      </section>
+
+      <!-- Playbook -->
+      <section class="plan-playbook-wrap hidden" id="agentPlaybookWrap">
+        <div class="plan-section-head">
+          <h2 class="plan-h2">Kịch bản</h2>
+          <div class="plan-section-actions" id="agentPlaybookActions">
+            <button type="button" id="btnRunPlaybook" class="btn-primary btn-sm">Chạy đã chọn</button>
+            <button type="button" id="btnRunPlaybookForce" class="btn-secondary btn-sm" title="Gồm bước cần xác nhận">Force</button>
+            <button type="button" id="btnRefreshStrategy" class="btn-quiet btn-sm">Làm lại</button>
+            <button type="button" id="btnClearPlaybook" class="btn-quiet btn-sm">Xóa</button>
+          </div>
+        </div>
+        <div class="agent-playbook-card" id="agentPlaybookCard"></div>
+      </section>
+
+      <!-- Chat secondary -->
+      <details class="plan-chat-drawer" id="planChatDrawer">
+        <summary>
+          <span>Chat phụ</span>
+          <span class="plan-chat-sub">Chỉnh kịch bản · hỏi thêm</span>
+        </summary>
+        <div class="plan-chat-body">
+          <div id="agentChat" class="agent-chat">
+            <div class="agent-empty" id="agentEmpty">
+              <p class="agent-empty-desc">Dùng chat sau khi đã có kịch bản — hoặc lệnh nhanh bên dưới.</p>
+              <div class="agent-suggestions">
+                <button type="button" class="agent-chip" data-action="strategy">Phân tích lại</button>
+                <button type="button" class="agent-chip" data-prompt="Tóm tắt kịch bản và đề xuất risk conservative.">Hỏi kịch bản</button>
+                <button type="button" class="agent-chip" data-prompt="Dừng tất cả automation (x_stop_all).">Stop all</button>
+              </div>
+            </div>
+          </div>
+          <div class="agent-composer">
+            <textarea id="agentInput" rows="2" placeholder="Nhắn Grok… Enter gửi"></textarea>
+            <button type="button" id="btnAgentSend" class="btn-send" title="Gửi" aria-label="Gửi">↑</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <!-- ============================================ -->
   <!-- AUTOMATIONS TAB -->
   <!-- ============================================ -->
-  <section id="tab-automations" class="tab-content active">
+  <section id="tab-automations" class="tab-content">
 
     <!-- Dashboard Summary -->
     <div class="dashboard-summary" id="dashboardSummary">
@@ -522,6 +715,7 @@
       No automations match your filter
     </div>
   </section>
+
   <!-- ============================================ -->
   <section id="tab-activity" class="tab-content">
     <div class="activity-header">
@@ -529,6 +723,7 @@
       <div class="activity-controls">
         <select id="logFilter" class="log-filter-select">
           <option value="all">All</option>
+          <option value="aiAgent">🤖 Agent</option>
           <option value="autoLiker">❤️ Liker</option>
           <option value="smartUnfollow">👋 Unfollow</option>
           <option value="keywordFollow">🔍 Follow</option>
@@ -564,6 +759,11 @@
       <label class="checkbox-label">
         <input type="checkbox" id="globalDebug" checked> Debug logging
       </label>
+    </div>
+    <div class="settings-section">
+      <h3>AI Agent</h3>
+      <p class="settings-hint">Tab <strong>Plan</strong> = Strategist (phân tích → kịch bản). Key/OAuth lưu <code>chrome.storage.local</code> trên máy này.</p>
+      <button type="button" id="btnOpenAgentTab" class="btn-secondary">Mở tab Plan</button>
     </div>
     <div class="settings-section">
       <h3>Data</h3>
@@ -627,6 +827,8 @@
     </div>
   </div>
 
+  <script src="agent-ui.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
+

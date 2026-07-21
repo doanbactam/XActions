@@ -1,227 +1,244 @@
 // Copyright (c) 2024-2026 nich (@nichxbt). Business Source License 1.1.
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authMiddleware } from '../middleware/auth.js';
-import { getTwitterClient } from './twitter.js';
-import { queueJob } from '../services/jobQueue.js';
+/**
+ * Operations API — all long jobs enqueue via operationService (Operation + Bull).
+ * Session cookies resolved from encrypted XSession (Phase A).
+ */
 
-// Payment routes archived - XActions is now 100% free and open-source
-// All credit checks have been removed - unlimited operations for all users
+import express from 'express';
+import { authMiddleware } from '../middleware/auth.js';
+import {
+  enqueueOperation,
+  listOperations,
+  getOperationForUser,
+  cancelOperationForUser,
+  OPERATION_TYPES,
+} from '../services/operationService.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
-// All routes require authentication
 router.use(authMiddleware);
 
-// Unfollow non-followers
+function sendErr(res, err, fallback) {
+  const status = err.status || 500;
+  if (status >= 500) console.error(`❌ ${fallback}:`, err.message);
+  return res.status(status).json({ error: err.message || fallback });
+}
+
+/**
+ * POST /api/operations
+ * Generic enqueue: { type, config?, sessionId? }
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { type, config = {}, sessionId } = req.body || {};
+    const result = await enqueueOperation({
+      userId: req.user.id,
+      type,
+      config,
+      sessionId,
+    });
+    return res.status(201).json(result);
+  } catch (err) {
+    return sendErr(res, err, 'Failed to enqueue operation');
+  }
+});
+
+/**
+ * GET /api/operations/types — whitelist
+ */
+router.get('/types', (_req, res) => {
+  res.json({ types: OPERATION_TYPES });
+});
+
+// ── Typed aliases (backward compatible) ──────────────────────────
+
 router.post('/unfollow-non-followers', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
-    }
-
-    const { maxUnfollows = 100, dryRun = false } = req.body;
-
-    // Create operation record
-    const operation = await prisma.operation.create({
-      data: {
-        userId: req.user.id,
-        type: 'unfollowNonFollowers',
-        status: 'pending',
-        config: JSON.stringify({ maxUnfollows, dryRun })
-      }
-    });
-
-    // Queue the job
-    await queueJob({
-      type: 'unfollowNonFollowers',
-      operationId: operation.id,
+    const { maxUnfollows = 100, dryRun = false, sessionId } = req.body || {};
+    const result = await enqueueOperation({
       userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { 
-        maxUnfollows, 
-        dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
-      }
+      type: 'unfollowNonFollowers',
+      sessionId,
+      config: { maxUnfollows, dryRun },
     });
-
-    res.json({
-      operationId: operation.id,
-      status: 'queued',
-      message: 'Unfollow operation queued successfully'
+    return res.json({
+      ...result,
+      message: 'Unfollow operation queued successfully',
     });
-  } catch (error) {
-    console.error('❌ Unfollow non-followers error:', error);
-    res.status(500).json({ error: 'Failed to start unfollow operation' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start unfollow operation');
   }
 });
 
-// Unfollow everyone
 router.post('/unfollow-everyone', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
-    }
-
-    const { maxUnfollows = 100, dryRun = false } = req.body;
-
-    const operation = await prisma.operation.create({
-      data: {
-        userId: req.user.id,
-        type: 'unfollowEveryone',
-        status: 'pending',
-        config: JSON.stringify({ maxUnfollows, dryRun })
-      }
-    });
-
-    await queueJob({
-      type: 'unfollowEveryone',
-      operationId: operation.id,
+    const { maxUnfollows = 100, dryRun = false, sessionId } = req.body || {};
+    const result = await enqueueOperation({
       userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: { 
-        maxUnfollows, 
-        dryRun,
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
-      }
+      type: 'unfollowEveryone',
+      sessionId,
+      config: { maxUnfollows, dryRun },
     });
-
-    res.json({
-      operationId: operation.id,
-      status: 'queued',
-      message: 'Unfollow everyone operation queued successfully'
+    return res.json({
+      ...result,
+      message: 'Unfollow everyone operation queued successfully',
     });
-  } catch (error) {
-    console.error('❌ Unfollow everyone error:', error);
-    res.status(500).json({ error: 'Failed to start unfollow operation' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start unfollow operation');
   }
 });
 
-// Detect unfollowers
 router.post('/detect-unfollowers', async (req, res) => {
   try {
-    if (!req.user.twitterAccessToken && !req.user.sessionCookie) {
-      return res.status(400).json({ error: 'Twitter account not connected - use OAuth or Session Cookie' });
-    }
-
-    const operation = await prisma.operation.create({
-      data: {
-        userId: req.user.id,
-        type: 'detectUnfollowers',
-        status: 'pending',
-        config: JSON.stringify({})
-      }
-    });
-
-    await queueJob({
-      type: 'detectUnfollowers',
-      operationId: operation.id,
+    const { sessionId, maxUsers } = req.body || {};
+    const result = await enqueueOperation({
       userId: req.user.id,
-      authMethod: req.user.authMethod || 'oauth',
-      config: {
-        username: req.user.twitterUsername,
-        sessionCookie: req.user.sessionCookie
-      }
+      type: 'detectUnfollowers',
+      sessionId,
+      config: { maxUsers },
     });
-
-    res.json({
-      operationId: operation.id,
-      status: 'queued',
-      message: 'Detect unfollowers operation queued successfully'
+    return res.json({
+      ...result,
+      message: 'Detect unfollowers operation queued successfully',
     });
-  } catch (error) {
-    console.error('❌ Detect unfollowers error:', error);
-    res.status(500).json({ error: 'Failed to start detect operation' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start detect operation');
   }
 });
 
-// Get operation status
+router.post('/auto-like', async (req, res) => {
+  try {
+    const { sessionId, ...config } = req.body || {};
+    const result = await enqueueOperation({
+      userId: req.user.id,
+      type: 'autoLike',
+      sessionId,
+      config,
+    });
+    return res.json({ ...result, message: 'Auto-like queued' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start auto-like');
+  }
+});
+
+router.post('/keyword-follow', async (req, res) => {
+  try {
+    const { sessionId, ...config } = req.body || {};
+    const result = await enqueueOperation({
+      userId: req.user.id,
+      type: 'keywordFollow',
+      sessionId,
+      config,
+    });
+    return res.json({ ...result, message: 'Keyword follow queued' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start keyword follow');
+  }
+});
+
+router.post('/follow-engagers', async (req, res) => {
+  try {
+    const { sessionId, ...config } = req.body || {};
+    const result = await enqueueOperation({
+      userId: req.user.id,
+      type: 'followEngagers',
+      sessionId,
+      config,
+    });
+    return res.json({ ...result, message: 'Follow engagers queued' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start follow engagers');
+  }
+});
+
+router.post('/auto-comment', async (req, res) => {
+  try {
+    const { sessionId, ...config } = req.body || {};
+    const result = await enqueueOperation({
+      userId: req.user.id,
+      type: 'autoComment',
+      sessionId,
+      config,
+    });
+    return res.json({ ...result, message: 'Auto-comment queued' });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to start auto-comment');
+  }
+});
+
+// ── Status / cancel / list ───────────────────────────────────────
+
 router.get('/status/:operationId', async (req, res) => {
   try {
-    const { operationId } = req.params;
-
-    const operation = await prisma.operation.findFirst({
-      where: {
-        id: operationId,
-        userId: req.user.id
-      }
-    });
-
-    if (!operation) {
-      return res.status(404).json({ error: 'Operation not found' });
-    }
-
-    res.json(operation);
-  } catch (error) {
-    console.error('❌ Operation status error:', error);
-    res.status(500).json({ error: 'Failed to fetch operation status' });
+    const operation = await getOperationForUser(
+      req.user.id,
+      req.params.operationId,
+    );
+    return res.json(operation);
+  } catch (err) {
+    return sendErr(res, err, 'Failed to fetch operation status');
   }
 });
 
-// Cancel operation
+router.get('/:operationId', async (req, res) => {
+  // Avoid capturing "types" etc. — only cuid-like ids
+  if (req.params.operationId === 'types') {
+    return res.json({ types: OPERATION_TYPES });
+  }
+  try {
+    const operation = await getOperationForUser(
+      req.user.id,
+      req.params.operationId,
+    );
+    return res.json(operation);
+  } catch (err) {
+    return sendErr(res, err, 'Failed to fetch operation');
+  }
+});
+
 router.post('/cancel/:operationId', async (req, res) => {
   try {
-    const { operationId } = req.params;
-
-    const operation = await prisma.operation.findFirst({
-      where: {
-        id: operationId,
-        userId: req.user.id,
-        status: { in: ['pending', 'processing'] }
-      }
-    });
-
-    if (!operation) {
-      return res.status(404).json({ error: 'Operation not found or already completed' });
-    }
-
-    await prisma.operation.update({
-      where: { id: operationId },
-      data: { status: 'cancelled' }
-    });
-
-    res.json({ message: 'Operation cancelled successfully' });
-  } catch (error) {
-    console.error('❌ Operation cancellation error:', error);
-    res.status(500).json({ error: 'Failed to cancel operation' });
+    const result = await cancelOperationForUser(
+      req.user.id,
+      req.params.operationId,
+    );
+    return res.json(result);
+  } catch (err) {
+    return sendErr(res, err, 'Failed to cancel operation');
   }
 });
 
-// List all operations
+router.post('/:operationId/cancel', async (req, res) => {
+  try {
+    const result = await cancelOperationForUser(
+      req.user.id,
+      req.params.operationId,
+    );
+    return res.json(result);
+  } catch (err) {
+    return sendErr(res, err, 'Failed to cancel operation');
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, type } = req.query;
-    const skip = (page - 1) * limit;
-
-    const where = { userId: req.user.id };
-    if (status) where.status = status;
-    if (type) where.type = type;
-
-    const [operations, total] = await Promise.all([
-      prisma.operation.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: parseInt(skip),
-        take: parseInt(limit)
-      }),
-      prisma.operation.count({ where })
-    ]);
-
-    res.json({
-      operations,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit)
-      }
+    const { page, limit, status, type } = req.query;
+    const result = await listOperations(req.user.id, {
+      page,
+      limit,
+      status,
+      type,
     });
-  } catch (error) {
-    console.error('❌ Operations list error:', error);
-    res.status(500).json({ error: 'Failed to fetch operations' });
+    return res.json({
+      operations: result.items,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        pages: Math.ceil(result.total / result.limit) || 1,
+      },
+    });
+  } catch (err) {
+    return sendErr(res, err, 'Failed to fetch operations');
   }
 });
 
