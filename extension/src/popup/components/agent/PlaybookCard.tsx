@@ -1,4 +1,5 @@
 // by nichxbt
+import * as React from 'react';
 import { Checkbox } from '@base-ui/react/checkbox';
 import type { UseAgentReturn } from '../../lib/useAgent';
 
@@ -13,34 +14,57 @@ const STATUS_ICON: Record<string, string> = {
 export function PlaybookCard({ agent }: { agent: UseAgentReturn }) {
   const { playbook, busy, runPlaybook, runStrategy, clearPlaybook, updateSteps } = agent;
   const steps = playbook?.playbook?.steps ?? [];
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const doneCount = steps.filter((s) => s.status === 'done').length;
+  const failedCount = steps.filter((s) => s.status === 'failed').length;
 
   return (
     <section className="xa-playbook-wrap">
       <div className="xa-section-head">
         <h2 className="xa-h2">Kịch bản</h2>
         <div className="xa-section-actions">
-          <button type="button" className="xa-btn-primary xa-btn-sm" disabled={busy} onClick={() => runPlaybook(false)}>
-            Chạy đã chọn
+          <button
+            type="button"
+            className="xa-btn-primary xa-btn-sm"
+            disabled={busy}
+            onClick={() => runPlaybook(false)}
+          >
+            {busy ? 'Đang chạy…' : 'Chạy'}
           </button>
           <button
             type="button"
-            className="xa-btn-secondary xa-btn-sm"
-            title="Gồm bước cần xác nhận"
-            disabled={busy}
-            onClick={() => runPlaybook(true)}
+            className="xa-btn-quiet xa-btn-sm"
+            title="Thêm tùy chọn"
+            onClick={() => setMenuOpen((v) => !v)}
           >
-            Force
-          </button>
-          <button type="button" className="xa-btn-quiet xa-btn-sm" disabled={busy} onClick={runStrategy}>
-            Làm lại
-          </button>
-          <button type="button" className="xa-btn-quiet xa-btn-sm" onClick={clearPlaybook}>
-            Xóa
+            ⋯
           </button>
         </div>
       </div>
 
+      {menuOpen && (
+        <div className="xa-playbook-menu">
+          <button type="button" className="xa-btn-quiet xa-btn-sm xa-btn-block" disabled={busy} onClick={() => { runPlaybook(true); setMenuOpen(false); }}>
+            Chạy tất cả (force)
+          </button>
+          <button type="button" className="xa-btn-quiet xa-btn-sm xa-btn-block" disabled={busy} onClick={() => { runStrategy(); setMenuOpen(false); }}>
+            Phân tích lại
+          </button>
+          <button type="button" className="xa-btn-quiet xa-btn-sm xa-btn-block" onClick={() => { clearPlaybook(); setMenuOpen(false); }}>
+            Xóa kịch bản
+          </button>
+        </div>
+      )}
+
       {playbook?.playbook?.goal && <p className="xa-playbook-goal">{playbook.playbook.goal}</p>}
+
+      {steps.length > 0 && (
+        <div className="xa-playbook-progress">
+          {doneCount > 0 && <span className="xa-playbook-progress-done">✅ {doneCount}</span>}
+          {failedCount > 0 && <span className="xa-playbook-progress-fail">❌ {failedCount}</span>}
+          <span className="xa-playbook-progress-total">{doneCount}/{steps.length}</span>
+        </div>
+      )}
 
       <div className="xa-playbook-card">
         {steps.length === 0 ? (
