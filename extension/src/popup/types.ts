@@ -27,38 +27,6 @@ export interface GlobalSettings {
   debug: boolean;
 }
 
-export type FieldType = 'text' | 'tags' | 'number' | 'checkbox' | 'select' | 'delay';
-
-export interface SettingFieldDef {
-  key: string;
-  label: string;
-  type: FieldType;
-  placeholder?: string;
-  hint?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  default: unknown;
-  options?: { value: string; label: string }[];
-}
-
-export type AutomationCategory = 'growth' | 'tools' | 'analytics';
-
-export interface AutomationDef {
-  id: string;
-  icon: string;
-  title: string;
-  desc: string;
-  category: AutomationCategory;
-  searchable: string;
-  toggleIdleLabel: string;
-  toggleRunningLabel: string;
-  idleBadge: string;
-  hasSpeedPreset: boolean;
-  actionUnit: string;
-  fields: SettingFieldDef[];
-}
-
 export interface AccountInfo {
   name?: string;
   handle?: string;

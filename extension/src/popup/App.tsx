@@ -6,7 +6,6 @@ import { AccountCard } from './components/AccountCard';
 import { DisconnectedBanner, RateLimitBanner } from './components/Banners';
 import { OnboardingDialog } from './components/OnboardingDialog';
 import { PlanTab } from './components/tabs/PlanTab';
-import { AutomationsTab } from './components/tabs/AutomationsTab';
 import { ActivityTab } from './components/tabs/ActivityTab';
 import { SettingsTab } from './components/tabs/SettingsTab';
 import { useExtensionState } from './lib/useExtensionState';
@@ -16,7 +15,6 @@ import type { AccountInfo } from './types';
 
 const TABS = [
   { id: 'agent', icon: '◈', label: 'Plan' },
-  { id: 'automations', icon: '⚡', label: 'Auto' },
   { id: 'activity', icon: '☰', label: 'Log' },
   { id: 'settings', icon: '⚙', label: 'Cài đặt' },
 ] as const;
@@ -142,14 +140,6 @@ export function App() {
 
         <Tabs.Panel value="agent" className="xa-tabs-panel">
           <PlanTab />
-        </Tabs.Panel>
-        <Tabs.Panel value="automations" className="xa-tabs-panel">
-          <AutomationsTab
-            automations={state.automations}
-            activityLog={state.activityLog}
-            patchAutomation={state.patchAutomation}
-            pushLocalLog={state.pushLocalLog}
-          />
         </Tabs.Panel>
         <Tabs.Panel value="activity" className="xa-tabs-panel">
           <ActivityTab activityLog={state.activityLog} onCleared={state.refresh} />

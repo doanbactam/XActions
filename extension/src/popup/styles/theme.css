@@ -411,10 +411,6 @@ select.xa-input {
   box-shadow: 0 0 0 4px var(--xa-gold-soft);
 }
 
-.xa-speed-presets { display: flex; gap: 6px; margin-top: 4px; }
-.xa-speed-btn { flex: 1; background: var(--xa-bg-soft); border: 1px solid var(--xa-border); color: var(--xa-ink-3); border-radius: var(--xa-radius-xs); padding: 5px 0; font-size: 10.5px; font-weight: 650; cursor: pointer; }
-.xa-speed-btn.is-active { color: var(--xa-ink); background: var(--xa-accent-soft); border-color: rgba(182, 144, 79, 0.45); }
-
 /* ============================================ */
 /* ONBOARDING DIALOG */
 /* ============================================ */
@@ -442,64 +438,6 @@ select.xa-input {
 .xa-onboarding-actions { display: flex; flex-direction: column; gap: 10px; }
 .xa-onboarding-enable { justify-content: center; }
 .xa-onboarding-footer { text-align: center; margin-top: 14px; color: var(--xa-ink-3); }
-
-/* ============================================ */
-/* AUTOMATIONS TAB */
-/* ============================================ */
-.xa-dashboard-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-.xa-dash-stat { text-align: center; padding: 8px 4px; border: 1px solid var(--xa-border); border-radius: var(--xa-radius-sm); background: var(--xa-bg-card); }
-.xa-dash-value { font-size: 16px; font-weight: 700; color: var(--xa-accent-2); }
-.xa-dash-label { font-size: 9.5px; color: var(--xa-ink-3); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
-
-.xa-category-filters { display: flex; gap: 6px; margin-bottom: 8px; }
-.xa-cat-filter { flex: 1; background: var(--xa-bg-card); border: 1px solid var(--xa-border); color: var(--xa-ink-3); border-radius: var(--xa-radius-xs); padding: 6px 0; font-size: 11px; font-weight: 650; cursor: pointer; }
-.xa-cat-filter.is-active { color: var(--xa-ink); background: var(--xa-accent-soft); border-color: rgba(182, 144, 79, 0.4); }
-
-.xa-search-bar { margin-bottom: 10px; }
-.xa-search-input { width: 100%; }
-
-.xa-no-results { text-align: center; padding: 30px 10px; color: var(--xa-ink-3); font-size: 12px; }
-
-.xa-automation-card {
-  border: 1px solid var(--xa-border);
-  border-radius: var(--xa-radius);
-  background: var(--xa-bg-card);
-  padding: 10px;
-  margin-bottom: 8px;
-}
-.xa-automation-card.is-hidden { display: none; }
-.xa-automation-card.is-running { border-color: rgba(182, 144, 79, 0.45); box-shadow: 0 0 0 1px rgba(182, 144, 79, 0.08); }
-.xa-card-header { display: flex; align-items: flex-start; gap: 8px; }
-.xa-card-icon { font-size: 18px; line-height: 1; margin-top: 1px; }
-.xa-card-info { flex: 1; min-width: 0; }
-.xa-card-title { font-size: 12.5px; font-weight: 650; }
-.xa-card-desc { font-size: 10.5px; color: var(--xa-ink-3); margin-top: 1px; }
-.xa-status-badge { font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 999px; color: var(--xa-ink-3); border: 1px solid var(--xa-border-soft); white-space: nowrap; }
-.xa-status-badge.is-running { color: var(--xa-success); border-color: rgba(95, 143, 90, 0.4); background: var(--xa-success-soft); }
-.xa-status-badge.is-stopped { color: var(--xa-ink-3); }
-
-.xa-card-progress { position: relative; height: 5px; border-radius: 999px; background: var(--xa-bg-soft); margin: 8px 0 4px; overflow: hidden; }
-.xa-progress-bar { height: 100%; background: linear-gradient(90deg, var(--xa-accent), var(--xa-accent-2)); border-radius: 999px; transition: width 0.3s var(--xa-ease); }
-.xa-progress-text { position: absolute; right: 0; top: -14px; font-size: 9px; color: var(--xa-ink-3); }
-
-.xa-card-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.xa-action-count { font-size: 10.5px; color: var(--xa-ink-3); flex: 1; }
-.xa-session-timer { font-size: 10px; color: var(--xa-accent-2); font-weight: 650; }
-.xa-btn-settings,
-.xa-btn-toggle {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--xa-radius-xs);
-  border: 1px solid var(--xa-border);
-  background: var(--xa-bg-soft);
-  cursor: pointer;
-  font-size: 12px;
-  display: grid;
-  place-items: center;
-}
-.xa-btn-settings:hover, .xa-btn-toggle:hover { background: var(--xa-bg-hover); }
-
-.xa-card-settings { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; margin-top: 8px; border-top: 1px solid var(--xa-border-soft); }
 
 /* ============================================ */
 /* ACTIVITY TAB */
