@@ -155,6 +155,9 @@ async function handleMessage(message, sender) {
     case 'XAI_OAUTH_PENDING':
       return getXaiOauthPending();
 
+    case 'XAI_OAUTH_OPEN_PANEL':
+      return openXaiOauthPanel();
+
     case 'XAI_OAUTH_LOGOUT':
       return logoutXaiOauth();
 
@@ -216,14 +219,25 @@ async function getAgentConfig() {
 async function startXaiOauth() {
   try {
     const started = await globalThis.XActionsXaiOauth.startDeviceLogin();
-    // Open verification URL in a background tab so the popup keeps focus
     const url =
       started.verification_uri_complete || started.verification_uri;
+    // Prefer the side panel: it stays pinned to the right edge, does
+    // not steal focus from the popup, and persists across popup close.
     if (url) {
       try {
-        await chrome.tabs.create({ url, active: false });
+        await chrome.sidePanel.setOptions({
+          path: 'sidepanel/sidepanel.html',
+          enabled: true,
+        });
+        const win = await chrome.windows.getLastFocused();
+        await chrome.sidePanel.open({ windowId: win.id });
       } catch {
-        /* popup may still show the URL */
+        // sidePanel unavailable (old Chrome) — fall back to a tab
+        try {
+          await chrome.tabs.create({ url, active: false });
+        } catch {
+          /* popup may still show the URL */
+        }
       }
     }
     return { success: true, ...started };
@@ -255,6 +269,28 @@ async function getXaiOauthPending() {
     return { success: true, pending };
   } catch (err) {
     return { success: false, pending: null };
+  }
+}
+
+async function openXaiOauthPanel() {
+  try {
+    await chrome.sidePanel.setOptions({
+      path: 'sidepanel/sidepanel.html',
+      enabled: true,
+    });
+    const win = await chrome.windows.getLastFocused();
+    await chrome.sidePanel.open({ windowId: win.id });
+    return { success: true };
+  } catch (err) {
+    // Fallback: open verification URL in a background tab
+    try {
+      const pending = await globalThis.XActionsXaiOauth.getPendingDevice();
+      const url = pending?.verification_uri_complete || pending?.verification_uri;
+      if (url) await chrome.tabs.create({ url, active: false });
+    } catch {
+      /* ignore */
+    }
+    return { success: false, error: err?.message || String(err) };
   }
 }
 

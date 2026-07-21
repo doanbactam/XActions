@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>XActions — Đăng nhập xAI</title>
+  <style>
+    :root {
+      --bg: #0c0a09;
+      --ink-1: #e7e2d8;
+      --ink-2: #a8a29e;
+      --ink-3: #78716c;
+      --brass: #c9a84c;
+      --oxblood: #8b1538;
+      --border: #2a2520;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink-1);
+      font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .xa-sp-shell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 28px 20px;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .xa-sp-crest {
+      width: 36px; height: 36px;
+      border: 1px solid var(--brass);
+      transform: rotate(45deg);
+      position: relative;
+    }
+    .xa-sp-crest::after {
+      content: "X";
+      position: absolute;
+      inset: 0;
+      display: grid; place-items: center;
+      transform: rotate(-45deg);
+      color: var(--brass);
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .xa-sp-title {
+      font: 600 15px/1.3 ui-serif, Georgia, serif;
+      letter-spacing: 0.02em;
+      color: var(--ink-1);
+    }
+    .xa-sp-msg { color: var(--ink-2); font-size: 12.5px; max-width: 280px; }
+    .xa-sp-code {
+      font: 600 22px/1 ui-monospace, "SF Mono", Menlo, monospace;
+      letter-spacing: 0.18em;
+      color: var(--brass);
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #15110e;
+    }
+    .xa-sp-btn {
+      display: inline-block;
+      padding: 8px 16px;
+      background: var(--oxblood);
+      color: #f5efe2;
+      border: 1px solid #5c0e25;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .xa-sp-btn:hover { background: #a01942; }
+    .xa-sp-hint { color: var(--ink-3); font-size: 11px; }
+    .xa-sp-error { color: #f87171; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="xa-sp-shell">
+    <div class="xa-sp-crest"></div>
+    <div class="xa-sp-title">Đăng nhập xAI (Grok)</div>
+    <div id="xa-sp-status" class="xa-sp-msg">Đang chuẩn bị trang đăng nhập…</div>
+    <div id="xa-sp-code" class="xa-sp-code" hidden></div>
+    <a id="xa-sp-link" class="xa-sp-btn" href="#" hidden target="_blank" rel="noreferrer">Mở trang đăng nhập →</a>
+    <div id="xa-sp-hint" class="xa-sp-hint" hidden>Đăng nhập xong thì đóng panel này.</div>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

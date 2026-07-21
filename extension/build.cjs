@@ -25,6 +25,8 @@ const INCLUDE = [
   'popup/popup.html',
   'popup/popup.bundle.css',
   'popup/popup.bundle.js',
+  'sidepanel/sidepanel.html',
+  'sidepanel/sidepanel.js',
   'icons/icon16.png',
   'icons/icon48.png',
   'icons/icon128.png',

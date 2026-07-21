@@ -4,6 +4,7 @@ import { Accordion } from '@base-ui/react/accordion';
 import { Select } from '@base-ui/react/select';
 import type { UseAgentReturn } from '../../lib/useAgent';
 import { parseListInput } from '../../lib/format';
+import { sendMessage } from '../../lib/rpc';
 
 const PROVIDERS = [
   { value: 'xai-oauth', label: 'Grok (xAI OAuth)' },
@@ -61,15 +62,14 @@ export function ConfigPanel({ agent }: { agent: UseAgentReturn }) {
           <div className="xa-oauth-device">
             <div className="xa-code-label">Mã xác nhận</div>
             <div className="xa-user-code">{oauthDevice.userCode}</div>
-            <div className="xa-oauth-hint">Duyệt quyền trên tab trình duyệt…</div>
-            <a
+            <div className="xa-oauth-hint">Duyệt quyền trên sidebar bên phải…</div>
+            <button
+              type="button"
               className="xa-btn-link"
-              href={oauthDevice.verificationUriComplete || oauthDevice.verificationUri}
-              target="_blank"
-              rel="noreferrer"
+              onClick={() => sendMessage({ type: 'XAI_OAUTH_OPEN_PANEL' })}
             >
-              Mở trang login →
-            </a>
+              Mở lại sidebar đăng nhập →
+            </button>
           </div>
         )}
 
