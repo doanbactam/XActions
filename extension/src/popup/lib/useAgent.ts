@@ -49,6 +49,46 @@ export function useAgent() {
     }
   }, []);
 
+  const startOauthPoll = React.useCallback(
+    (intervalSec: number) => {
+      if (pollTimer.current) window.clearTimeout(pollTimer.current);
+      const poll = async () => {
+        const p = await sendMessage<{ status: string; error?: string }>({ type: 'XAI_OAUTH_POLL' });
+        if (p.status === 'success') {
+          setOauthDevice(null);
+          await loadConfig();
+          setStage('analyze');
+          return;
+        }
+        if (p.status === 'pending') {
+          pollTimer.current = window.setTimeout(poll, intervalSec * 1000);
+          return;
+        }
+        setOauthDevice(null);
+        setTestResult({ ok: false, message: p.error || 'Đăng nhập xAI thất bại' });
+      };
+      pollTimer.current = window.setTimeout(poll, intervalSec * 1000);
+    },
+    [loadConfig],
+  );
+
+  const resumeOauthIfPending = React.useCallback(async () => {
+    if (oauth?.signedIn) return;
+    const res = await sendMessage<{
+      success: boolean;
+      pending?: { user_code: string; verification_uri: string; verification_uri_complete?: string; interval: number; expires_at: number } | null;
+    }>({ type: 'XAI_OAUTH_PENDING' });
+    if (res?.success && res.pending) {
+      setOauthDevice({
+        userCode: res.pending.user_code,
+        verificationUri: res.pending.verification_uri,
+        verificationUriComplete: res.pending.verification_uri_complete,
+        interval: res.pending.interval * 1000,
+      });
+      startOauthPoll(res.pending.interval);
+    }
+  }, [oauth?.signedIn, startOauthPoll]);
+
   const loadPlaybook = React.useCallback(async () => {
     const res = await sendMessage<{ ok: boolean; playbook?: AgentPlaybookEnvelope }>({ type: 'AGENT_GET_PLAYBOOK' });
     if (res?.ok && res.playbook) {
@@ -58,7 +98,10 @@ export function useAgent() {
   }, []);
 
   React.useEffect(() => {
-    loadConfig();
+    (async () => {
+      await loadConfig();
+      await resumeOauthIfPending();
+    })();
     loadPlaybook();
     return () => {
       if (pollTimer.current) window.clearTimeout(pollTimer.current);
@@ -89,29 +132,15 @@ export function useAgent() {
       setTestResult({ ok: false, message: res?.error || 'Không thể bắt đầu đăng nhập xAI' });
       return;
     }
+    const intervalSec = res.interval || 5;
     setOauthDevice({
       userCode: res.user_code || '————',
       verificationUri: res.verification_uri || '',
       verificationUriComplete: res.verification_uri_complete,
-      interval: (res.interval || 5) * 1000,
+      interval: intervalSec * 1000,
     });
-    const poll = async () => {
-      const p = await sendMessage<{ status: string; error?: string }>({ type: 'XAI_OAUTH_POLL' });
-      if (p.status === 'success') {
-        setOauthDevice(null);
-        await loadConfig();
-        setStage('analyze');
-        return;
-      }
-      if (p.status === 'pending') {
-        pollTimer.current = window.setTimeout(poll, (res.interval || 5) * 1000);
-        return;
-      }
-      setOauthDevice(null);
-      setTestResult({ ok: false, message: p.error || 'Đăng nhập xAI thất bại' });
-    };
-    pollTimer.current = window.setTimeout(poll, (res.interval || 5) * 1000);
-  }, [loadConfig]);
+    startOauthPoll(intervalSec);
+  }, [startOauthPoll]);
 
   const logoutOauth = React.useCallback(async () => {
     await sendMessage({ type: 'XAI_OAUTH_LOGOUT' });

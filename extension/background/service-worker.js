@@ -152,6 +152,9 @@ async function handleMessage(message, sender) {
     case 'XAI_OAUTH_STATUS':
       return getXaiOauthStatus();
 
+    case 'XAI_OAUTH_PENDING':
+      return getXaiOauthPending();
+
     case 'XAI_OAUTH_LOGOUT':
       return logoutXaiOauth();
 
@@ -213,12 +216,12 @@ async function getAgentConfig() {
 async function startXaiOauth() {
   try {
     const started = await globalThis.XActionsXaiOauth.startDeviceLogin();
-    // Open verification URL for the user
+    // Open verification URL in a background tab so the popup keeps focus
     const url =
       started.verification_uri_complete || started.verification_uri;
     if (url) {
       try {
-        await chrome.tabs.create({ url });
+        await chrome.tabs.create({ url, active: false });
       } catch {
         /* popup may still show the URL */
       }
@@ -243,6 +246,15 @@ async function getXaiOauthStatus() {
     return { success: true, ...session };
   } catch (err) {
     return { success: false, signedIn: false, error: err.message };
+  }
+}
+
+async function getXaiOauthPending() {
+  try {
+    const pending = await globalThis.XActionsXaiOauth.getPendingDevice();
+    return { success: true, pending };
+  } catch (err) {
+    return { success: false, pending: null };
   }
 }
 

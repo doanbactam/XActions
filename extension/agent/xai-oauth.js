@@ -22,8 +22,9 @@
   ].join(' ');
 
   const STORAGE_KEY = 'xaiOauth';
+  const PENDING_KEY = 'xaiOauthPending';
 
-  /** @type {null | { device_code: string, interval: number, expires_at: number }} */
+  /** @type {null | { device_code: string, interval: number, expires_at: number, user_code?: string, verification_uri?: string, verification_uri_complete?: string }} */
   let pendingDevice = null;
 
   function formBody(obj) {
@@ -31,6 +32,28 @@
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
       .join('&');
+  }
+
+  async function savePending(info) {
+    pendingDevice = info;
+    if (info) {
+      await chrome.storage.local.set({ [PENDING_KEY]: info });
+    } else {
+      await chrome.storage.local.remove(PENDING_KEY);
+    }
+  }
+
+  async function loadPending() {
+    if (pendingDevice) return pendingDevice;
+    const data = await chrome.storage.local.get(PENDING_KEY);
+    const stored = data[PENDING_KEY];
+    if (!stored) return null;
+    if (Date.now() > stored.expires_at) {
+      await chrome.storage.local.remove(PENDING_KEY);
+      return null;
+    }
+    pendingDevice = stored;
+    return stored;
   }
 
   async function loadTokens() {
@@ -44,6 +67,7 @@
 
   async function clearTokens() {
     pendingDevice = null;
+    await chrome.storage.local.remove(PENDING_KEY);
     await chrome.storage.local.remove(STORAGE_KEY);
   }
 
@@ -76,16 +100,20 @@
 
     const interval = Math.max(Number(data.interval) || 5, 2);
     const expiresIn = Number(data.expires_in) || 900;
-    pendingDevice = {
-      device_code: data.device_code,
-      interval,
-      expires_at: Date.now() + expiresIn * 1000,
-    };
-
     const verificationUri =
       data.verification_uri_complete ||
       data.verification_uri ||
       'https://accounts.x.ai/connect';
+
+    const pending = {
+      device_code: data.device_code,
+      interval,
+      expires_at: Date.now() + expiresIn * 1000,
+      user_code: data.user_code,
+      verification_uri: data.verification_uri || verificationUri,
+      verification_uri_complete: data.verification_uri_complete || null,
+    };
+    await savePending(pending);
 
     return {
       user_code: data.user_code,
@@ -101,11 +129,12 @@
    * Poll until user approves (or timeout / deny).
    */
   async function pollDeviceLogin() {
-    if (!pendingDevice?.device_code) {
+    const pending = await loadPending();
+    if (!pending?.device_code) {
       return { status: 'idle', error: 'No login in progress — click Login with xAI first' };
     }
-    if (Date.now() > pendingDevice.expires_at) {
-      pendingDevice = null;
+    if (Date.now() > pending.expires_at) {
+      await savePending(null);
       return { status: 'expired', error: 'Login code expired — start again' };
     }
 
@@ -114,7 +143,7 @@
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formBody({
         grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        device_code: pendingDevice.device_code,
+        device_code: pending.device_code,
         client_id: CLIENT_ID,
       }),
     });
@@ -130,20 +159,21 @@
     if (res.ok && data.access_token) {
       const tokens = normalizeTokenResponse(data);
       await saveTokens(tokens);
-      pendingDevice = null;
+      await savePending(null);
       return { status: 'success', tokens: publicSession(tokens) };
     }
 
     const err = data.error || '';
     if (err === 'authorization_pending') {
-      return { status: 'pending', interval: pendingDevice.interval };
+      return { status: 'pending', interval: pending.interval };
     }
     if (err === 'slow_down') {
-      pendingDevice.interval = (pendingDevice.interval || 5) + 5;
-      return { status: 'pending', interval: pendingDevice.interval };
+      pending.interval = (pending.interval || 5) + 5;
+      await savePending(pending);
+      return { status: 'pending', interval: pending.interval };
     }
     if (err === 'expired_token' || err === 'access_denied') {
-      pendingDevice = null;
+      await savePending(null);
       return {
         status: err === 'access_denied' ? 'denied' : 'expired',
         error: data.error_description || err,
@@ -153,6 +183,21 @@
     return {
       status: 'error',
       error: data.error_description || data.error || `HTTP ${res.status}`,
+    };
+  }
+
+  /**
+   * Return current pending device flow info (for popup resume after close).
+   */
+  async function getPendingDevice() {
+    const pending = await loadPending();
+    if (!pending) return null;
+    return {
+      user_code: pending.user_code || '————',
+      verification_uri: pending.verification_uri || '',
+      verification_uri_complete: pending.verification_uri_complete || null,
+      interval: pending.interval || 5,
+      expires_at: pending.expires_at,
     };
   }
 
@@ -285,6 +330,7 @@
     ISSUER,
     startDeviceLogin,
     pollDeviceLogin,
+    getPendingDevice,
     getValidAccessToken,
     getSession,
     logout,
