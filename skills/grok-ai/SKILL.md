@@ -92,8 +92,7 @@ For programmatic AI content without Grok, the XActions MCP server includes AI to
 
 | MCP Tool | Purpose |
 |----------|---------|
-| `x_analyze_voice` | Analyze account's writing style |
-| `x_generate_tweet` | Generate tweet in user's voice |
+| `x_generate_tweet` | Generate a tweet |
 | `x_rewrite_tweet` | Rewrite tweet for better engagement |
 | `x_summarize_thread` | Summarize a thread |
 

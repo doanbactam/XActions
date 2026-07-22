@@ -113,7 +113,6 @@ const BASE_MCP_TOOLS = [
   { name: 'x_migrate_account', description: 'Migrate account data between platforms.', inputSchema: { type: 'object', properties: { source: { type: 'string' }, target: { type: 'string' } }, required: ['source', 'target'] } },
   { name: 'x_diff_exports', description: 'Compare two account exports.', inputSchema: { type: 'object', properties: { exportA: { type: 'string' }, exportB: { type: 'string' } }, required: ['exportA', 'exportB'] } },
   { name: 'x_best_time_to_post', description: 'Find the best time to post for engagement.', inputSchema: { type: 'object', properties: { username: { type: 'string' } } } },
-  { name: 'x_analyze_voice', description: 'Analyze writing voice and tone.', inputSchema: { type: 'object', properties: { username: { type: 'string' } }, required: ['username'] } },
   { name: 'x_generate_tweet', description: 'Generate a tweet using AI.', inputSchema: { type: 'object', properties: { topic: { type: 'string' }, tone: { type: 'string' } }, required: ['topic'] } },
   { name: 'x_rewrite_tweet', description: 'Rewrite a tweet for better engagement.', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
   { name: 'x_summarize_thread', description: 'Summarize a tweet thread.', inputSchema: { type: 'object', properties: { tweetId: { type: 'string' } }, required: ['tweetId'] } },
@@ -174,7 +173,7 @@ const BASE_MCP_TOOLS = [
 const CATEGORY_PATTERNS = {
   scraping: /^x_(get|scrape)_/,
   posting: /^x_(post|tweet|reply|retweet|repost|create_poll|quote_tweet|auto_comment|auto_retweet|auto_like)/,
-  analytics: /^x_(analytics|engagement|performance|audience|creator|get_analytics|get_post_analytics|audience_insights|engagement_report|creator_analytics|predict|best_time|analyze_voice|analyze_sentiment)/,
+  analytics: /^x_(analytics|engagement|performance|audience|creator|get_analytics|get_post_analytics|audience_insights|engagement_report|creator_analytics|predict|best_time|analyze_sentiment)/,
   automation: /^x_(auto_|schedule|workflow|bulk|evergreen|rss)/,
   management: /^x_(unfollow|follow|block|mute|unmute|detect_unfollowers|smart_unfollow|detect_bots)/,
   profile: /^x_(profile|update_profile|get_settings|toggle_protected|check_premium)/,

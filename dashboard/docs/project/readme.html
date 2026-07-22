@@ -1419,7 +1419,7 @@ npx xactions mcp-config --client windsurf
 </tr>
 <tr>
 <td><strong>AI</strong></td>
-<td><code>x_analyze_voice</code>, <code>x_generate_tweet</code>, <code>x_summarize_thread</code>, <code>x_rewrite_tweet</code>, <code>x_detect_bots</code>, <code>x_find_influencers</code>, <code>x_smart_target</code>, <code>x_grok_analyze_image</code></td>
+<td><code>x_generate_tweet</code>, <code>x_summarize_thread</code>, <code>x_rewrite_tweet</code>, <code>x_detect_bots</code>, <code>x_find_influencers</code>, <code>x_smart_target</code>, <code>x_grok_analyze_image</code></td>
 </tr>
 <tr>
 <td><strong>Monitoring</strong></td>
@@ -1448,7 +1448,7 @@ npx xactions mcp-config --client windsurf
 </tbody></table>
 <h3>Example Prompts</h3>
 <blockquote>
-<p><strong>&quot;Analyze @paulg&#39;s writing style and generate 3 tweet ideas about startups in his voice&quot;</strong><br>→ Scrapes tweets → analyzes voice → generates content with AI</p>
+<p><strong>&quot;Analyze @paulg&#39;s writing style and generate 3 tweet ideas about startups that match his style&quot;</strong><br>→ Scrapes tweets → analyzes their style → generates content with AI</p>
 </blockquote>
 <blockquote>
 <p><strong>&quot;Find everyone I follow who doesn&#39;t follow me back, sorted by follower count&quot;</strong><br>→ Uses x_get_following + x_get_followers → computes diff → formats results</p>

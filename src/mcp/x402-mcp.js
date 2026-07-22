@@ -89,7 +89,6 @@ export const MCP_TOOL_PRICES = {
   x_audience_overlap:         '$0.02',
 
   // ── AI Tools ─────────────────────────────────────────────────
-  x_analyze_voice:            '$0.02',
   x_generate_tweet:           '$0.01',
   x_rewrite_tweet:            '$0.005',
   x_summarize_thread:         '$0.01',

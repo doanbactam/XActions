@@ -3,7 +3,7 @@
  * AI Analytics Endpoints
  *
  * Account analytics, post performance, competitor analysis,
- * audience overlap, growth tracking, voice analysis, content generation.
+ * audience overlap, growth tracking, content generation.
  *
  * @module api/routes/ai/analytics
  */
@@ -454,58 +454,11 @@ router.post('/compare-accounts', async (req, res) => {
 });
 
 /**
- * POST /api/ai/analytics/analyze-voice
- * Analyze writing voice from a user's tweets
- */
-router.post('/analyze-voice', async (req, res) => {
-  const { username, limit = 50 } = req.body;
-  if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
-
-  const cleanUsername = username.replace(/^@/, '').toLowerCase();
-  const effectiveLimit = Math.min(Math.max(parseInt(limit) || 50, 20), 100);
-
-  try {
-    const startTime = Date.now();
-    const { scrapeTweets } = await import('../../services/browserAutomation.js');
-    const tweets = await scrapeTweets(req.sessionCookie, cleanUsername, { limit: effectiveLimit });
-
-    const items = tweets.items || [];
-    const texts = items.filter(t => !t.isRetweet).map(t => t.text).filter(Boolean);
-
-    const wordCount = texts.reduce((s, t) => s + t.split(/\s+/).length, 0);
-    const avgLength = texts.length > 0 ? Math.round(wordCount / texts.length) : 0;
-    const emojiRegex = /\p{Emoji}/u;
-    const emojiFreq = texts.filter(t => emojiRegex.test(t)).length / Math.max(texts.length, 1);
-    const questionFreq = texts.filter(t => t.includes('?')).length / Math.max(texts.length, 1);
-    const exclamationFreq = texts.filter(t => t.includes('!')).length / Math.max(texts.length, 1);
-
-    const voiceProfile = {
-      username: cleanUsername,
-      analyzedTweets: texts.length,
-      style: {
-        avgTweetLength: avgLength,
-        usesEmojis: emojiFreq > 0.3,
-        emojiFrequency: Math.round(emojiFreq * 100),
-        asksQuestions: questionFreq > 0.2,
-        usesExclamations: exclamationFreq > 0.2,
-        tone: emojiFreq > 0.5 ? 'casual' : questionFreq > 0.3 ? 'inquisitive' : 'informative',
-      },
-      sampleTweets: texts.slice(0, 5),
-    };
-
-    return successResponse(res, voiceProfile, { durationMs: Date.now() - startTime });
-  } catch (error) {
-    return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
-  }
-});
-
-/**
  * POST /api/ai/analytics/generate-tweet
- * Generate a tweet in a user's voice
+ * Generate a tweet on a topic
  */
 router.post('/generate-tweet', async (req, res) => {
-  const { username, topic, style, count = 3 } = req.body;
-  if (!username) return res.status(400).json({ error: 'INVALID_INPUT', message: 'username is required' });
+  const { topic, style, count = 3, model, apiKey } = req.body;
   if (!topic) return res.status(400).json({ error: 'INVALID_INPUT', message: 'topic is required' });
 
   try {
@@ -515,10 +468,11 @@ router.post('/generate-tweet', async (req, res) => {
       id: operationId,
       type: 'generateTweet',
       config: {
-        username: username.replace(/^@/, '').toLowerCase(),
-        topic, style: style || null,
+        topic,
+        style: style || null,
         count: Math.min(parseInt(count) || 3, 10),
-        sessionCookie: req.sessionCookie,
+        model: model || null,
+        apiKey: apiKey || null,
       },
       source: 'ai-api',
       createdAt: new Date().toISOString(),
@@ -601,7 +555,7 @@ router.post('/summarize-thread', async (req, res) => {
         fullText: format === 'full' ? fullText : undefined,
         bullets: format === 'bullets' ? keyPoints.map(p => `• ${p}`) : undefined,
       },
-    }, { durationMs: Date.now() - startTime, note: 'Basic extractive summary — use writer/analyze-voice for LLM-enhanced version' });
+    }, { durationMs: Date.now() - startTime, note: 'Basic extractive summary' });
   } catch (error) {
     return errorResponse(res, 500, 'ANALYSIS_FAILED', error.message);
   }

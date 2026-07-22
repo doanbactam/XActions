@@ -541,7 +541,6 @@ export async function createX402Client(config) {
     x_history_snapshot: '/api/ai/analytics/snapshot',
     x_growth_rate: '/api/ai/analytics/growth-rate',
     x_compare_accounts: '/api/ai/analytics/compare-accounts',
-    x_analyze_voice: '/api/ai/analytics/analyze-voice',
     x_generate_tweet: '/api/ai/analytics/generate-tweet',
     x_rewrite_tweet: '/api/ai/analytics/rewrite-tweet',
     x_summarize_thread: '/api/ai/analytics/summarize-thread',

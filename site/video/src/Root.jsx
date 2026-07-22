@@ -84,7 +84,7 @@ export const RemotionRoot = () => {
           tweets: [
             'I built a free MCP server with 75+ tools for Twitter automation.\n\nHere\'s what it can do 🧵',
             '1/ Scrape anything — profiles, followers, tweets, threads, videos.\n\nNo API key needed. Just your browser cookie.',
-            '2/ AI writing assistant — analyze anyone\'s voice, then generate tweets that match their style.\n\nPowered by free LLMs via OpenRouter.',
+            '2/ AI writing assistant — generate tweets and threads from any topic.\n\nPowered by free LLMs via OpenRouter.',
             '3/ Real-time analytics — best time to post, engagement rates, follower growth, sentiment analysis.',
             '4/ Works with Claude, Cursor, Windsurf, VS Code, GPT.\n\nJust run: npx xactions-mcp\n\ngithub.com/nirholas/XActions',
           ],
@@ -105,7 +105,7 @@ export const RemotionRoot = () => {
           tweets: [
             'I built a free MCP server with 75+ tools for Twitter automation.\n\nHere\'s what it can do 🧵',
             '1/ Scrape anything — profiles, followers, tweets, threads, videos.\n\nNo API key needed.',
-            '2/ AI writing assistant — analyze voice → generate matching tweets.',
+            '2/ AI writing assistant — generate tweets from any topic.',
             '3/ Real-time analytics — best posting times, engagement, sentiment.',
             '4/ Works with Claude, Cursor, GPT.\n\nnpx xactions-mcp\ngithub.com/nirholas/XActions',
           ],

@@ -275,51 +275,52 @@ const S = {
       tweetId: { type: 'string' },
     },
   },
-  writerAnalyzeVoice: {
-    type: 'object',
-    required: ['username', 'authToken'],
-    properties: {
-      username: { type: 'string' },
-      authToken: { type: 'string', description: 'X/Twitter auth_token cookie' },
-      tweetLimit: { type: 'integer', default: 200 },
-    },
-  },
   writerGenerate: {
     type: 'object',
-    required: ['username', 'topic'],
+    required: ['topic'],
     properties: {
-      username: { type: 'string' },
       topic: { type: 'string' },
-      count: { type: 'integer', default: 5 },
-      style: { type: 'string', enum: ['casual', 'professional', 'provocative', 'educational'] },
+      count: { type: 'integer', default: 3 },
+      type: { type: 'string', enum: ['tweet', 'thread'], default: 'tweet' },
+      threadLength: { type: 'integer', default: 5 },
+      style: { type: 'string', enum: ['hot-take', 'educational', 'personal', 'promotional'] },
+      model: { type: 'string' },
+      apiKey: { type: 'string' },
     },
   },
   writerRewrite: {
     type: 'object',
-    required: ['tweet'],
+    required: ['text'],
     properties: {
-      tweet: { type: 'string' },
-      goal: { type: 'string', enum: ['engagement', 'clarity', 'humor', 'professionalism'] },
-      voiceUsername: { type: 'string' },
+      text: { type: 'string' },
+      goal: { type: 'string', enum: ['more_engaging', 'shorter', 'add_hook', 'more_casual', 'more_formal', 'add_cta'] },
+      count: { type: 'integer', default: 3 },
+      style: { type: 'string', enum: ['hot-take', 'educational', 'personal', 'promotional'] },
+      model: { type: 'string' },
+      apiKey: { type: 'string' },
     },
   },
   writerCalendar: {
     type: 'object',
-    required: ['username'],
     properties: {
-      username: { type: 'string' },
-      niche: { type: 'string' },
-      tweetsPerDay: { type: 'integer', default: 3 },
+      topics: { type: 'array', items: { type: 'string' } },
+      postsPerDay: { type: 'integer', default: 2 },
+      days: { type: 'integer', default: 7 },
+      style: { type: 'string', enum: ['hot-take', 'educational', 'personal', 'promotional'] },
+      model: { type: 'string' },
+      apiKey: { type: 'string' },
     },
   },
   writerReply: {
     type: 'object',
-    required: ['tweetText'],
+    required: ['originalTweet'],
     properties: {
-      tweetText: { type: 'string' },
-      tweetUrl: { type: 'string' },
-      voiceUsername: { type: 'string' },
+      originalTweet: { type: 'string' },
       tone: { type: 'string' },
+      count: { type: 'integer', default: 3 },
+      style: { type: 'string', enum: ['hot-take', 'educational', 'personal', 'promotional'] },
+      model: { type: 'string' },
+      apiKey: { type: 'string' },
     },
   },
 
@@ -564,13 +565,9 @@ const S = {
     type: 'object', required: ['usernames'],
     properties: { ...sessionProp, usernames: { type: 'array', items: { type: 'string' }, minItems: 2 } },
   },
-  analyticsAnalyzeVoice: {
-    type: 'object', required: ['username'],
-    properties: { ...sessionProp, username: { type: 'string' }, tweetLimit: { type: 'integer', default: 100 } },
-  },
   analyticsGenerateTweet: {
-    type: 'object', required: ['username', 'topic'],
-    properties: { ...sessionProp, username: { type: 'string' }, topic: { type: 'string' }, count: { type: 'integer', default: 5 } },
+    type: 'object', required: ['topic'],
+    properties: { ...sessionProp, topic: { type: 'string' }, count: { type: 'integer', default: 3 } },
   },
   analyticsRewriteTweet: {
     type: 'object', required: ['tweet'],
@@ -954,7 +951,7 @@ Categories:
 - action: Automate account actions (unfollow, like, follow, auto-like, bulk operations)
 - posting: Create content (tweet, thread, poll, schedule, delete, reply, bookmark, article)
 - engagement: Engagement automation (follow, like, retweet, mute/unmute, trends, bot detection, influencer finder)
-- analytics: Deep analytics (account, post, competitor, audience overlap, growth rate, voice analysis)
+- analytics: Deep analytics (account, post, competitor, audience overlap, growth rate)
 - messages: Direct messages (send, list conversations, export)
 - profile: Profile management (update, settings, protected mode, blocked accounts)
 - grok: Grok AI integration (query, summarize, image analysis)
@@ -970,7 +967,7 @@ Categories:
 - crm: Follower CRM (tag, segment, search contacts)
 - schedule: Post scheduling and RSS auto-posting
 - optimizer: Tweet optimization (hashtags, variations, performance prediction)
-- writer: AI content generation (voice analysis, tweet generator, content calendar)
+- writer: AI content generation (tweet generator, content calendar)
 - utility: Video download, bookmark export, thread unroll, profile/tweet analysis
 - notify: Webhook notifications
 - datasets: Pre-built datasets
@@ -1365,23 +1362,10 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
       },
 
       // ─── Writer ──────────────────────────────────────────────────
-      '/api/ai/writer/analyze-voice': {
-        post: {
-          tags: ['Writer'],
-          summary: 'Analyze a user\'s writing voice from tweets',
-          'x-payment-info': paymentInfo('writer:analyze-voice'),
-          'x-bazaar': bazaarExt(S.writerAnalyzeVoice),
-          requestBody: {
-            required: true,
-            content: { 'application/json': { schema: S.writerAnalyzeVoice } },
-          },
-          responses: { 200: ok200('Voice profile analysis'), 402: payment402 },
-        },
-      },
       '/api/ai/writer/generate': {
         post: {
           tags: ['Writer'],
-          summary: 'Generate tweets in a user\'s voice',
+          summary: 'Generate tweets on a topic',
           'x-payment-info': paymentInfo('writer:generate'),
           'x-bazaar': bazaarExt(S.writerGenerate),
           requestBody: {
@@ -1430,22 +1414,6 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
           responses: { 200: ok200('Generated reply'), 402: payment402 },
         },
       },
-      '/api/ai/writer/voice-profiles': {
-        get: {
-          tags: ['Writer'],
-          summary: 'List saved voice profiles',
-          responses: { 200: ok200('Voice profiles list') },
-        },
-      },
-      '/api/ai/writer/voice-profiles/{username}': {
-        get: {
-          tags: ['Writer'],
-          summary: 'Get a voice profile',
-          parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' } }],
-          responses: { 200: ok200('Voice profile') },
-        },
-      },
-
       // ─── Scraping extras ─────────────────────────────────────────
       '/api/ai/scrape/likes': {
         post: {
@@ -2058,20 +2026,10 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
           responses: { 200: ok200('Account comparison'), 402: payment402 },
         },
       },
-      '/api/ai/analytics/analyze-voice': {
-        post: {
-          tags: ['Analytics'],
-          summary: 'Analyze writing voice from tweets',
-          'x-payment-info': paymentInfo('analytics:analyze-voice'),
-          'x-bazaar': bazaarExt(S.analyticsAnalyzeVoice),
-          requestBody: { required: true, content: { 'application/json': { schema: S.analyticsAnalyzeVoice } } },
-          responses: { 200: ok200('Voice analysis'), 402: payment402 },
-        },
-      },
       '/api/ai/analytics/generate-tweet': {
         post: {
           tags: ['Analytics'],
-          summary: 'Generate tweet in user voice',
+          summary: 'Generate tweet on a topic',
           'x-payment-info': paymentInfo('analytics:generate-tweet'),
           'x-bazaar': bazaarExt(S.analyticsGenerateTweet),
           requestBody: { required: true, content: { 'application/json': { schema: S.analyticsGenerateTweet } } },
@@ -4193,7 +4151,7 @@ Free alternatives: Browser scripts, CLI, and Node.js library at https://xactions
       { name: 'Notifications', description: 'Webhook notifications for automation events' },
       { name: 'Datasets', description: 'Pre-built X/Twitter datasets for analysis' },
       { name: 'Teams', description: 'Team management for collaborative automation' },
-      { name: 'Writer', description: 'AI-powered tweet generation, voice analysis, content calendar' },
+      { name: 'Writer', description: 'AI-powered tweet generation, content calendar' },
       { name: 'Scripts', description: 'Browser scripts for direct X/Twitter automation (downloadable)' },
       { name: 'Automation', description: 'Auto-reply, auto-repost, content calendar, engagement booster' },
       { name: 'Community', description: 'Join, leave, create, and manage X Communities' },
@@ -4333,7 +4291,6 @@ const ALL_PAID_RESOURCES = [
   'POST /api/ai/analytics/snapshot',
   'POST /api/ai/analytics/growth-rate',
   'POST /api/ai/analytics/compare-accounts',
-  'POST /api/ai/analytics/analyze-voice',
   'POST /api/ai/analytics/generate-tweet',
   'POST /api/ai/analytics/rewrite-tweet',
   'POST /api/ai/analytics/summarize-thread',
@@ -4433,7 +4390,6 @@ const ALL_PAID_RESOURCES = [
   'POST /api/ai/optimizer/variations',
 
   // ── Writer ────────────────────────────────────────────────────────
-  'POST /api/ai/writer/analyze-voice',
   'POST /api/ai/writer/generate',
   'POST /api/ai/writer/rewrite',
   'POST /api/ai/writer/calendar',

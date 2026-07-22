@@ -602,97 +602,17 @@
 
       <!-- Tab Navigation -->
       <div class="tab-nav" style="display: flex; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 100;">
-        <button class="tab-btn active" data-tab="voice" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-primary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid var(--accent); transition: all 0.2s;">🎭 Voice Analysis</button>
-        <button class="tab-btn" data-tab="generate" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">✍️ Generate</button>
+        <button class="tab-btn active" data-tab="generate" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-primary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid var(--accent); transition: all 0.2s;">✍️ Generate</button>
         <button class="tab-btn" data-tab="calendar" style="flex: 1; padding: 16px; background: none; border: none; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">📅 Calendar</button>
       </div>
 
-      <!-- ==================== TAB 1: Voice Analysis ==================== -->
-      <div class="tab-panel active" id="tab-voice">
-        <section class="section">
-          <h2 class="section-title">🎭 Analyze Writing Voice</h2>
-          <p>Enter a Twitter username to scrape their tweets and analyze their writing style, tone, vocabulary, and content patterns.</p>
-
-          <div class="feature-card" style="margin-top: 16px;">
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span style="color: var(--text-secondary); font-size: 1.25rem;">@</span>
-              <input type="text" id="voice-username" placeholder="username" style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text-primary); font-size: 1rem; outline: none;" />
-              <button id="btn-analyze-voice" onclick="analyzeVoice()" style="background: var(--accent); color: white; border: none; border-radius: 9999px; padding: 12px 24px; font-weight: 700; cursor: pointer; white-space: nowrap;">Analyze Voice</button>
-            </div>
-            <p style="margin-top: 8px; font-size: 0.8125rem;">Takes 30-60 seconds to scrape and analyze tweets. Requires auth token.</p>
-            <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
-              <input type="password" id="voice-auth-token" placeholder="auth_token cookie (from x.com DevTools)" style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
-            </div>
-          </div>
-
-          <!-- Loading State -->
-          <div id="voice-loading" style="display: none; text-align: center; padding: 40px 16px;">
-            <div style="font-size: 2rem; animation: pulse 1.5s ease-in-out infinite;">🔍</div>
-            <p style="margin-top: 12px; font-weight: 600;">Scraping tweets and analyzing voice...</p>
-            <p style="font-size: 0.8125rem;">This may take 30-60 seconds</p>
-          </div>
-
-          <!-- Voice Profile Result -->
-          <div id="voice-result" style="display: none;">
-            <!-- Profile Card -->
-            <div class="feature-card" style="margin-top: 16px;">
-              <h3 id="voice-profile-title">📊 Voice Profile</h3>
-              
-              <!-- Tone Radar (text-based) -->
-              <div style="margin-top: 16px;">
-                <h4 style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 8px;">TONE DIMENSIONS</h4>
-                <div id="tone-bars"></div>
-              </div>
-
-              <!-- Style Metrics -->
-              <div style="margin-top: 20px;">
-                <h4 style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 8px;">WRITING STYLE</h4>
-                <div id="style-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
-              </div>
-            </div>
-
-            <!-- Content Pillars -->
-            <div class="feature-card" style="margin-top: 12px;">
-              <h3>📌 Content Pillars</h3>
-              <div id="content-pillars" style="margin-top: 12px;"></div>
-            </div>
-
-            <!-- Top Words -->
-            <div class="feature-card" style="margin-top: 12px;">
-              <h3>💬 Top Words</h3>
-              <div id="top-words" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
-            </div>
-
-            <!-- Best Performing Traits -->
-            <div class="feature-card" style="margin-top: 12px;">
-              <h3>🏆 Best Performing Traits</h3>
-              <ul id="best-traits" style="margin-top: 8px;"></ul>
-            </div>
-
-            <!-- Top Example Tweets -->
-            <div class="feature-card" style="margin-top: 12px;">
-              <h3>⭐ Top Tweets</h3>
-              <div id="top-tweets" style="margin-top: 8px;"></div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- ==================== TAB 2: Generate ==================== -->
-      <div class="tab-panel" id="tab-generate" style="display: none;">
+      <!-- ==================== TAB 1: Generate ==================== -->
+      <div class="tab-panel active" id="tab-generate">
         <section class="section">
           <h2 class="section-title">✍️ Generate Tweets</h2>
-          <p>Generate tweets in a user's analyzed voice. Run Voice Analysis first.</p>
+          <p>Generate tweets, threads, replies, and rewrites from a topic or prompt.</p>
 
           <div class="feature-card" style="margin-top: 16px;">
-            <!-- Voice Profile Selector -->
-            <div style="margin-bottom: 12px;">
-              <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Voice Profile</label>
-              <select id="gen-profile" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text-primary); font-size: 0.9375rem; outline: none;">
-                <option value="">— Analyze a voice first —</option>
-              </select>
-            </div>
-
             <!-- Topic Input -->
             <div style="margin-bottom: 12px;">
               <label style="font-size: 0.875rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Topic / Prompt</label>
@@ -784,12 +704,6 @@
 
           <div class="feature-card" style="margin-top: 16px;">
             <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 120px;">
-                <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Voice Profile</label>
-                <select id="cal-profile" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;">
-                  <option value="">— Analyze a voice first —</option>
-                </select>
-              </div>
               <div style="flex: 1; min-width: 80px;">
                 <label style="font-size: 0.8125rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Days</label>
                 <input type="number" id="cal-days" value="7" min="1" max="14" style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;" />
@@ -831,16 +745,16 @@
           <summary style="cursor: pointer; font-weight: 700; font-size: 1.125rem;">ℹ️ How It Works</summary>
           <div style="margin-top: 16px;">
             <div class="feature-card">
-              <h3>Step 1: Analyze Voice</h3>
-              <p>Scrapes a user's tweet history and extracts patterns: writing style, tone, vocabulary, content pillars, and engagement correlations.</p>
+              <h3>Step 1: Choose a Style</h3>
+              <p>Pick a tone for your content: hot take, educational, personal, or promotional.</p>
             </div>
             <div class="feature-card" style="margin-top: 8px;">
               <h3>Step 2: Generate Content</h3>
-              <p>Uses the voice profile as context for an LLM (via OpenRouter) to generate tweets that match the user's exact voice and style.</p>
+              <p>Enter a topic and let the LLM (via OpenRouter) generate tweets, threads, replies, rewrites, or a full content calendar.</p>
             </div>
             <div class="feature-card" style="margin-top: 8px;">
               <h3>🔥 Killer Feature</h3>
-              <p>Scrape a competitor's tweets → analyze what works → generate your own tweets that match the winning patterns but in YOUR voice.</p>
+              <p>Generate a week's worth of content in seconds and export it as JSON or CSV.</p>
             </div>
           </div>
         </details>
@@ -850,14 +764,11 @@
     <!-- Right Sidebar -->
     <aside class="sidebar-right" aria-label="Supplementary information">
       <div class="promo-card">
-        <h3 class="promo-header">� AI Writer</h3>
-        <div class="promo-item">
-          <h4>Voice Analysis</h4>
-          <p>Scrape tweets → analyze writing style</p>
-        </div>
+        <h3 class="promo-header">🤖 AI Writer</h3>
+
         <div class="promo-item">
           <h4>Tweet Generation</h4>
-          <p>Generate tweets in any voice</p>
+          <p>Generate tweets, threads, replies, and rewrites</p>
         </div>
         <div class="promo-item">
           <h4>Content Calendar</h4>
@@ -869,17 +780,13 @@
       <div class="promo-card">
         <h3 class="promo-header">🔥 Killer Feature</h3>
         <div class="promo-item">
-          <h4>Competitor Analysis</h4>
-          <p>Scrape competitor tweets → analyze what works → generate in YOUR voice</p>
+          <h4>Content Calendar Export</h4>
+          <p>Generate a week's worth of content in seconds and export as JSON or CSV.</p>
         </div>
       </div>
 
       <div class="promo-card">
         <h3 class="promo-header">⚡ API Endpoints</h3>
-        <div class="promo-item">
-          <h4>POST /api/ai/writer/analyze-voice</h4>
-          <p>Analyze writing voice</p>
-        </div>
         <div class="promo-item">
           <h4>POST /api/ai/writer/generate</h4>
           <p>Generate tweets</p>
@@ -892,7 +799,7 @@
       </div>
 
       <div class="disclaimer">
-        <p>AI Tweet Writer requires an OpenRouter API key for generation. Voice analysis is free (scraping only).</p>
+        <p>AI Tweet Writer requires an OpenRouter API key for generation.</p>
         <p style="margin-top: 8px;">© 2026 XActions — by <a href="https://x.com/nichxbt">@nichxbt</a></p>
       </div>
     </aside>
@@ -904,13 +811,7 @@
   <!-- ==================== JavaScript ==================== -->
   <script>
     // ====== State ======
-    const API_BASE = CONFIG.API_BASE; // '/api' on prod, 'http://localhost:3001/api' locally
-    let savedProfiles = JSON.parse(localStorage.getItem('xactions_ai_profiles') || '{}');
     let currentCalendar = null;
-
-    function persistProfiles() {
-      localStorage.setItem('xactions_ai_profiles', JSON.stringify(savedProfiles));
-    }
 
     // ====== Tab Navigation ======
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -935,126 +836,8 @@
       document.getElementById('reply-options').style.display = e.target.value === 'reply' ? 'block' : 'none';
     });
 
-    // ====== Voice Analysis ======
-    async function analyzeVoice() {
-      const username = document.getElementById('voice-username').value.trim().replace(/^@/, '');
-      const authToken = document.getElementById('voice-auth-token').value.trim();
-
-      if (!username) return alert('Enter a username');
-      if (!authToken) return alert('Enter your auth_token cookie');
-
-      document.getElementById('voice-loading').style.display = 'block';
-      document.getElementById('voice-result').style.display = 'none';
-
-      try {
-        const data = await apiRequest('/ai/writer/analyze-voice', {
-          method: 'POST',
-          body: JSON.stringify({ username, authToken, tweetLimit: 200 }),
-        });
-
-        if (!data.success) throw new Error(data.error || data.message || 'Analysis failed');
-
-        const profile = data.data.profile;
-        savedProfiles[username.toLowerCase()] = profile;
-        persistProfiles();
-        renderVoiceProfile(profile);
-        updateProfileSelectors();
-      } catch (err) {
-        alert('Error: ' + err.message);
-      } finally {
-        document.getElementById('voice-loading').style.display = 'none';
-      }
-    }
-
-    function renderVoiceProfile(profile) {
-      document.getElementById('voice-result').style.display = 'block';
-      document.getElementById('voice-profile-title').textContent = `📊 Voice Profile: @${profile.username} (${profile.tweetCount} tweets)`;
-
-      // Tone bars
-      const toneBars = document.getElementById('tone-bars');
-      toneBars.innerHTML = '';
-      const tones = [
-        { label: 'Formality', value: profile.tone.formality, color: '#1d9bf0' },
-        { label: 'Humor', value: profile.tone.humor, color: '#ffad1f' },
-        { label: 'Controversy', value: profile.tone.controversy, color: '#f4212e' },
-        { label: 'Technicality', value: profile.tone.technicality, color: '#794bc4' },
-      ];
-      for (const t of tones) {
-        toneBars.innerHTML += `
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <span style="width: 100px; font-size: 0.8125rem; color: var(--text-secondary);">${t.label}</span>
-            <div style="flex: 1; background: var(--bg-tertiary); border-radius: 4px; height: 8px; overflow: hidden;">
-              <div style="width: ${Math.round(t.value * 100)}%; height: 100%; background: ${t.color}; border-radius: 4px; transition: width 0.5s;"></div>
-            </div>
-            <span style="width: 36px; font-size: 0.75rem; color: var(--text-secondary); text-align: right;">${Math.round(t.value * 100)}%</span>
-          </div>`;
-      }
-
-      // Style metrics
-      const styleMetrics = document.getElementById('style-metrics');
-      const s = profile.style;
-      const metrics = [
-        { label: 'Avg Length', value: s.avgLength + ' chars' },
-        { label: 'Emoji/tweet', value: s.emojiRate.toFixed(2) },
-        { label: 'Hashtag/tweet', value: s.hashtagRate.toFixed(2) },
-        { label: 'Question Rate', value: Math.round(s.questionRate * 100) + '%' },
-        { label: 'Thread Rate', value: Math.round(s.threadRate * 100) + '%' },
-        { label: 'Link Rate', value: Math.round(s.urlRate * 100) + '%' },
-      ];
-      styleMetrics.innerHTML = metrics.map(m => `
-        <div style="background: var(--bg-tertiary); border-radius: 8px; padding: 10px 12px;">
-          <div style="font-size: 0.75rem; color: var(--text-secondary);">${m.label}</div>
-          <div style="font-size: 1.125rem; font-weight: 700; margin-top: 2px;">${m.value}</div>
-        </div>`).join('');
-
-      // Content pillars
-      const pillarsEl = document.getElementById('content-pillars');
-      if (profile.contentPillars.length > 0) {
-        pillarsEl.innerHTML = profile.contentPillars.map(p => `
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <span style="width: 80px; font-size: 0.875rem; font-weight: 600; text-transform: capitalize;">${p.topic}</span>
-            <div style="flex: 1; background: var(--bg-tertiary); border-radius: 4px; height: 8px; overflow: hidden;">
-              <div style="width: ${Math.round(p.frequency * 100)}%; height: 100%; background: var(--accent); border-radius: 4px;"></div>
-            </div>
-            <span style="font-size: 0.75rem; color: var(--text-secondary);">${Math.round(p.frequency * 100)}%</span>
-          </div>`).join('');
-      } else {
-        pillarsEl.innerHTML = '<p>No strong topic clusters detected</p>';
-      }
-
-      // Top words
-      const wordsEl = document.getElementById('top-words');
-      wordsEl.innerHTML = profile.vocabulary.topWords.slice(0, 20).map(w => {
-        const size = Math.min(1.5, 0.75 + w.count * 0.05);
-        return `<span style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 9999px; padding: 4px 10px; font-size: ${size}rem;">${w.word}</span>`;
-      }).join('');
-
-      // Best traits
-      const traitsEl = document.getElementById('best-traits');
-      if (profile.bestPerforming.commonTraits.length > 0) {
-        traitsEl.innerHTML = profile.bestPerforming.commonTraits.map(t => `<li>${t}</li>`).join('');
-      } else {
-        traitsEl.innerHTML = '<li>Not enough data for trait analysis</li>';
-      }
-
-      // Top tweets
-      const tweetsEl = document.getElementById('top-tweets');
-      if (profile.bestPerforming.examples.length > 0) {
-        tweetsEl.innerHTML = profile.bestPerforming.examples.map(t => `
-          <div style="background: var(--bg-tertiary); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
-            <p style="color: var(--text-primary); margin-bottom: 6px;">${escapeHTML(t.text)}</p>
-            <div style="display: flex; gap: 16px; font-size: 0.75rem; color: var(--text-secondary);">
-              <span>❤️ ${t.likes}</span><span>🔁 ${t.retweets}</span><span>💬 ${t.replies}</span>
-            </div>
-          </div>`).join('');
-      } else {
-        tweetsEl.innerHTML = '<p>No examples available</p>';
-      }
-    }
-
     // ====== Generate Content ======
     async function generateContent() {
-      const profileKey = document.getElementById('gen-profile').value;
       const topic = document.getElementById('gen-topic').value.trim();
       const type = document.getElementById('gen-type').value;
       const style = document.getElementById('gen-style').value;
@@ -1062,11 +845,7 @@
       const apiKey = document.getElementById('gen-api-key').value.trim();
       const model = document.getElementById('gen-model').value.trim();
 
-      if (!profileKey) return alert('Select a voice profile first');
       if (!topic) return alert('Enter a topic or prompt');
-
-      const voiceProfile = savedProfiles[profileKey];
-      if (!voiceProfile) return alert('Voice profile not found. Run analysis first.');
 
       document.getElementById('gen-loading').style.display = 'block';
       document.getElementById('gen-results').style.display = 'none';
@@ -1076,16 +855,16 @@
 
         if (type === 'rewrite') {
           endpoint = '/ai/writer/rewrite';
-          body = { username: profileKey, text: topic, goal: document.getElementById('gen-rewrite-goal').value, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
+          body = { text: topic, goal: document.getElementById('gen-rewrite-goal').value, count, apiKey: apiKey || undefined, model: model || undefined, style: style || undefined };
         } else if (type === 'reply') {
           endpoint = '/ai/writer/reply';
-          body = { username: profileKey, originalTweet: topic, tone: document.getElementById('gen-reply-tone').value || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
+          body = { originalTweet: topic, tone: document.getElementById('gen-reply-tone').value || undefined, count, apiKey: apiKey || undefined, model: model || undefined, style: style || undefined };
         } else if (type === 'thread') {
           endpoint = '/ai/writer/generate';
-          body = { username: profileKey, topic, type: 'thread', threadLength: count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
+          body = { topic, type: 'thread', threadLength: count, apiKey: apiKey || undefined, model: model || undefined, style: style || undefined };
         } else {
           endpoint = '/ai/writer/generate';
-          body = { username: profileKey, topic, style: style || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
+          body = { topic, style: style || undefined, count, apiKey: apiKey || undefined, model: model || undefined };
         }
 
         const data = await apiRequest(endpoint, {
@@ -1138,16 +917,10 @@
 
     // ====== Content Calendar ======
     async function generateCalendar() {
-      const profileKey = document.getElementById('cal-profile').value;
       const days = parseInt(document.getElementById('cal-days').value) || 7;
       const postsPerDay = parseInt(document.getElementById('cal-ppd').value) || 2;
       const topicsStr = document.getElementById('cal-topics').value.trim();
       const topics = topicsStr ? topicsStr.split(',').map(t => t.trim()).filter(Boolean) : undefined;
-
-      if (!profileKey) return alert('Select a voice profile first');
-
-      const voiceProfile = savedProfiles[profileKey];
-      if (!voiceProfile) return alert('Voice profile not found');
 
       document.getElementById('cal-loading').style.display = 'block';
       document.getElementById('cal-grid').style.display = 'none';
@@ -1155,7 +928,7 @@
       try {
         const data = await apiRequest('/ai/writer/calendar', {
           method: 'POST',
-          body: JSON.stringify({ username: profileKey, topics, postsPerDay, days, voiceProfile }),
+          body: JSON.stringify({ topics, postsPerDay, days }),
         });
 
         if (!data.success) throw new Error(data.error || data.message || 'Calendar generation failed');
@@ -1229,13 +1002,6 @@
     }
 
     // ====== Helpers ======
-    function updateProfileSelectors() {
-      const options = Object.keys(savedProfiles).map(k => `<option value="${k}">@${k}</option>`).join('');
-      const placeholder = '<option value="">— Select voice profile —</option>';
-      document.getElementById('gen-profile').innerHTML = placeholder + options;
-      document.getElementById('cal-profile').innerHTML = placeholder + options;
-    }
-
     function copyTweet(btn, text) {
       navigator.clipboard.writeText(text).then(() => {
         btn.textContent = '✅ Copied!';
@@ -1253,9 +1019,6 @@
       if (!str) return '';
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-
-    // Initialize profile selectors from localStorage on page load
-    updateProfileSelectors();
   </script>
 
   <style>

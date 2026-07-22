@@ -77,7 +77,7 @@ xactions mcp-config --client vscode --write
 `x_send_dm`, `x_get_conversations`, `x_export_dms`
 
 ### AI (requires OPENROUTER_API_KEY)
-`x_analyze_voice`, `x_generate_tweet`, `x_rewrite_tweet`, `x_summarize_thread`
+`x_generate_tweet`, `x_rewrite_tweet`, `x_summarize_thread`
 
 ### Advanced
 - **Streaming:** `x_stream_start/stop/list/pause/resume/status/history`
@@ -104,7 +104,7 @@ xactions mcp-config --client vscode --write
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `XACTIONS_SESSION_COOKIE` | Yes | X auth_token for authentication |
-| `OPENROUTER_API_KEY` | No | Enables AI tools (voice analysis, tweet generation) |
+| `OPENROUTER_API_KEY` | No | Enables AI tools (tweet generation) |
 
 ## Full Documentation
 See `docs/mcp-setup.md` for complete setup guide with troubleshooting.

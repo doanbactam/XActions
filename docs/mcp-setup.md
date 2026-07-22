@@ -209,8 +209,8 @@ Then use `xactions-mcp` as the command instead of `npx`:
 
 | Tool | Description |
 |------|-------------|
-| `x_analyze_voice` | Analyze a user's writing style |
-| `x_generate_tweet` | Generate tweets in a user's voice |
+| `x_generate_tweet` | Generate tweets on a topic |
+| `x_rewrite_tweet` | Rewrite/improve a tweet |
 | `x_summarize_thread` | AI-powered thread summarization |
 
 ---
@@ -226,7 +226,7 @@ Try these with Claude, Cursor, or any MCP-compatible AI:
 > "Find everyone I follow who doesn't follow me back. Show me the list sorted by how long ago I followed them."
 
 ### Content
-> "Analyze @paulg's writing style, then generate 3 tweet ideas about startups in his voice."
+> "Analyze @paulg's writing style, then generate 3 tweet ideas about startups that match his style."
 
 ### Analytics
 > "Compare the follower counts, tweet frequency, and engagement of @openai, @anthropic, and @google."
@@ -279,7 +279,7 @@ Auth is required for action tools. Make sure `XACTIONS_SESSION_COOKIE` is set in
 
 ### "OPENROUTER_API_KEY required"
 
-AI tools (voice analysis, tweet generation, thread summarization) need an OpenRouter API key. Get a free one at [openrouter.ai](https://openrouter.ai).
+AI tools (tweet generation, thread summarization) need an OpenRouter API key. Get a free one at [openrouter.ai](https://openrouter.ai).
 
 ### Server won't start
 

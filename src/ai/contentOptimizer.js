@@ -166,59 +166,6 @@ export async function generateVariations(text, count = 3) {
   return generateOfflineVariations(text, count);
 }
 
-/**
- * Analyze a user's writing voice from their tweets
- */
-export async function analyzeVoice(username) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-
-  // Scrape recent tweets
-  let tweets = [];
-  try {
-    const scrapers = await import('../scrapers/index.js');
-    const browser = await scrapers.createBrowser({ headless: true });
-    const page = await scrapers.createPage(browser);
-    try {
-      tweets = await scrapers.scrapeTweets(page, username, { limit: 100 });
-    } finally {
-      await browser.close();
-    }
-  } catch (error) {
-    return { error: `Failed to scrape tweets: ${error.message}` };
-  }
-
-  const texts = tweets.map(t => t.text || t.fullText || '').filter(Boolean);
-  if (texts.length === 0) return { error: 'No tweets found' };
-
-  // Analyze patterns
-  const avgLength = Math.round(texts.reduce((sum, t) => sum + t.length, 0) / texts.length);
-  const emojiUsage = texts.filter(t => /[\u{1F600}-\u{1F9FF}]/u.test(t)).length / texts.length;
-  const questionUsage = texts.filter(t => t.includes('?')).length / texts.length;
-  const hashtagUsage = texts.filter(t => t.includes('#')).length / texts.length;
-  const commonPhrases = findCommonPhrases(texts);
-
-  const voiceProfile = {
-    username,
-    tweetsAnalyzed: texts.length,
-    avgLength,
-    emojiUsage: Math.round(emojiUsage * 100) + '%',
-    questionUsage: Math.round(questionUsage * 100) + '%',
-    hashtagUsage: Math.round(hashtagUsage * 100) + '%',
-    commonPhrases,
-    tone: emojiUsage > 0.5 ? 'casual/fun' : questionUsage > 0.3 ? 'conversational' : 'informational',
-  };
-
-  if (apiKey) {
-    try {
-      const sampleTweets = texts.slice(0, 20).join('\n---\n');
-      const prompt = `Analyze the writing voice and style of these tweets. Describe: tone, vocabulary level, common patterns, emoji usage, sentence structure. Be concise (3-5 sentences).\n\nTweets:\n${sampleTweets}`;
-      voiceProfile.aiAnalysis = (await callLLM(apiKey, prompt)).trim();
-    } catch { /* AI analysis optional */ }
-  }
-
-  return { voiceProfile };
-}
-
 // ============================================================================
 // Offline/Rule-Based Functions
 // ============================================================================

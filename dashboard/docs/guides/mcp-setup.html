@@ -431,12 +431,8 @@
 </tr>
 </thead>
 <tbody><tr>
-<td><code>x_analyze_voice</code></td>
-<td>Analyze a user&#39;s writing style</td>
-</tr>
-<tr>
 <td><code>x_generate_tweet</code></td>
-<td>Generate tweets in a user&#39;s voice</td>
+<td>Generate tweets on a topic</td>
 </tr>
 <tr>
 <td><code>x_summarize_thread</code></td>
@@ -456,7 +452,7 @@
 </blockquote>
 <h3>Content</h3>
 <blockquote>
-<p>&quot;Analyze @paulg&#39;s writing style, then generate 3 tweet ideas about startups in his voice.&quot;</p>
+<p>&quot;Analyze @paulg&#39;s writing style, then generate 3 tweet ideas about startups that match his style.&quot;</p>
 </blockquote>
 <h3>Analytics</h3>
 <blockquote>
@@ -499,7 +495,7 @@ xactions-mcp
 <h3>&quot;Could not follow/unfollow/post&quot;</h3>
 <p>Auth is required for action tools. Make sure <code>XACTIONS_SESSION_COOKIE</code> is set in your MCP config <code>env</code>.</p>
 <h3>&quot;OPENROUTER_API_KEY required&quot;</h3>
-<p>AI tools (voice analysis, tweet generation, thread summarization) need an OpenRouter API key. Get a free one at <a href="https://openrouter.ai">openrouter.ai</a>.</p>
+<p>AI tools (tweet generation, thread summarization) need an OpenRouter API key. Get a free one at <a href="https://openrouter.ai">openrouter.ai</a>.</p>
 <h3>Server won&#39;t start</h3>
 <pre><code class="language-bash"># Test manually
 node node_modules/xactions/src/mcp/server.js

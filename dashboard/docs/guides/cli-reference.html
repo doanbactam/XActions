@@ -1793,36 +1793,8 @@ xactions scrape trending -p twitter
 </code></pre>
 <hr>
 <h2>AI Writer Commands</h2>
-<h3>xactions ai analyze</h3>
-<p>Analyze a user&#39;s writing voice from their tweets.</p>
-<pre><code class="language-bash">xactions ai analyze &lt;username&gt; [options]
-</code></pre>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>-l, --limit &lt;n&gt;</code></td>
-<td>Tweets to analyze</td>
-<td><code>100</code></td>
-</tr>
-<tr>
-<td><code>-o, --output &lt;file&gt;</code></td>
-<td>Save voice profile</td>
-<td>—</td>
-</tr>
-<tr>
-<td><code>--json</code></td>
-<td>JSON output</td>
-<td><code>false</code></td>
-</tr>
-</tbody></table>
 <h3>xactions ai generate</h3>
-<p>Generate tweets or threads in a user&#39;s voice.</p>
+<p>Generate tweets or threads on a topic.</p>
 <pre><code class="language-bash">xactions ai generate &lt;topic&gt; [options]
 </code></pre>
 <table>
@@ -1834,18 +1806,13 @@ xactions scrape trending -p twitter
 </tr>
 </thead>
 <tbody><tr>
-<td><code>-v, --voice &lt;username&gt;</code></td>
-<td>Voice to mimic</td>
-<td><strong>required</strong></td>
-</tr>
-<tr>
 <td><code>-c, --count &lt;n&gt;</code></td>
 <td>Number of variations</td>
 <td><code>3</code></td>
 </tr>
 <tr>
 <td><code>-s, --style &lt;style&gt;</code></td>
-<td>casual, professional, provocative</td>
+<td>hot-take, educational, personal, promotional</td>
 <td>—</td>
 </tr>
 <tr>
@@ -1865,7 +1832,7 @@ xactions scrape trending -p twitter
 </tr>
 </tbody></table>
 <h3>xactions ai rewrite</h3>
-<p>Rewrite a tweet in a user&#39;s voice with a goal.</p>
+<p>Rewrite a tweet with a goal.</p>
 <pre><code class="language-bash">xactions ai rewrite &lt;text&gt; [options]
 </code></pre>
 <table>
@@ -1877,13 +1844,8 @@ xactions scrape trending -p twitter
 </tr>
 </thead>
 <tbody><tr>
-<td><code>-v, --voice &lt;username&gt;</code></td>
-<td>Voice to mimic</td>
-<td><strong>required</strong></td>
-</tr>
-<tr>
 <td><code>-g, --goal &lt;goal&gt;</code></td>
-<td>more_engaging, shorter, more_professional, funnier</td>
+<td>more_engaging, shorter, add_hook, more_casual, more_formal, add_cta</td>
 <td><code>more_engaging</code></td>
 </tr>
 <tr>
@@ -1891,10 +1853,15 @@ xactions scrape trending -p twitter
 <td>Number of variations</td>
 <td><code>3</code></td>
 </tr>
+<tr>
+<td><code>-s, --style &lt;style&gt;</code></td>
+<td>hot-take, educational, personal, promotional</td>
+<td>—</td>
+</tr>
 </tbody></table>
 <h3>xactions ai calendar</h3>
 <p>Generate a weekly content calendar.</p>
-<pre><code class="language-bash">xactions ai calendar &lt;username&gt; [options]
+<pre><code class="language-bash">xactions ai calendar [options]
 </code></pre>
 <table>
 <thead>
@@ -2994,24 +2961,19 @@ XACTIONS_HEADLESS=false xactions profile nichxbt
 <td><code>xactions platforms</code></td>
 </tr>
 <tr>
-<td><code>ai analyze</code></td>
-<td>Analyze writing voice</td>
-<td><code>xactions ai analyze nichxbt</code></td>
-</tr>
-<tr>
 <td><code>ai generate</code></td>
 <td>Generate tweets</td>
-<td><code>xactions ai generate &quot;AI&quot; -v nichxbt</code></td>
+<td><code>xactions ai generate &quot;AI&quot;</code></td>
 </tr>
 <tr>
 <td><code>ai rewrite</code></td>
 <td>Rewrite tweet</td>
-<td><code>xactions ai rewrite &quot;text&quot; -v nichxbt</code></td>
+<td><code>xactions ai rewrite &quot;text&quot;</code></td>
 </tr>
 <tr>
 <td><code>ai calendar</code></td>
 <td>Content calendar</td>
-<td><code>xactions ai calendar nichxbt -d 7</code></td>
+<td><code>xactions ai calendar -d 7</code></td>
 </tr>
 <tr>
 <td><code>optimize</code></td>

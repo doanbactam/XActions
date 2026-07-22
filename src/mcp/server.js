@@ -1153,33 +1153,11 @@ const TOOLS = [
   },
   // ====== AI Tools (require OPENROUTER_API_KEY) ======
   {
-    name: 'x_analyze_voice',
-    description: 'Analyze a user\'s writing style/voice from their tweets. Returns tone, vocabulary patterns, emoji usage, avg length, and a voice profile. Requires OPENROUTER_API_KEY for full analysis.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        username: {
-          type: 'string',
-          description: 'Username whose voice to analyze (without @)',
-        },
-        limit: {
-          type: 'number',
-          description: 'Number of tweets to analyze (default: 50)',
-        },
-      },
-      required: ['username'],
-    },
-  },
-  {
     name: 'x_generate_tweet',
-    description: 'Generate a tweet in the style of a user. First analyzes their voice, then generates content matching their tone. Requires OPENROUTER_API_KEY.',
+    description: 'Generate a tweet or thread on a topic. Requires OPENROUTER_API_KEY.',
     inputSchema: {
       type: 'object',
       properties: {
-        username: {
-          type: 'string',
-          description: 'Username whose style to mimic (without @)',
-        },
         topic: {
           type: 'string',
           description: 'Topic or subject for the generated tweet',
@@ -1198,19 +1176,15 @@ const TOOLS = [
           description: 'Generate single tweets or a thread (default: tweet)',
         },
       },
-      required: ['username', 'topic'],
+      required: ['topic'],
     },
   },
   {
     name: 'x_rewrite_tweet',
-    description: 'Rewrite/improve an existing tweet to be more engaging, shorter, add a hook, etc. Uses a voice profile for style matching. Requires OPENROUTER_API_KEY.',
+    description: 'Rewrite/improve an existing tweet to be more engaging, shorter, add a hook, etc. Requires OPENROUTER_API_KEY.',
     inputSchema: {
       type: 'object',
       properties: {
-        username: {
-          type: 'string',
-          description: 'Username whose voice to match for the rewrite (without @)',
-        },
         text: {
           type: 'string',
           description: 'The original tweet text to improve',
@@ -1224,8 +1198,12 @@ const TOOLS = [
           type: 'number',
           description: 'Number of rewrite variations (default: 3)',
         },
+        style: {
+          type: 'string',
+          description: 'Optional style: hot-take, educational, personal, promotional',
+        },
       },
-      required: ['username', 'text'],
+      required: ['text'],
     },
   },
   {
@@ -1318,7 +1296,7 @@ const TOOLS = [
   // ====== Persona & Algorithm Builder ======
   {
     name: 'x_persona_create',
-    description: 'Create a new persona for algorithm building and automated account growth. A persona defines niche, topics, engagement strategy, activity patterns, and LLM voice settings. Use presets for quick setup.',
+    description: 'Create a new persona for algorithm building and automated account growth. A persona defines niche, topics, engagement strategy, and activity patterns. Use presets for quick setup.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2249,8 +2227,8 @@ async function executeTool(name, args) {
     return await executeAnalyticsTool(name, args);
   }
 
-  // Handle AI tools (voice, generation, rewrite, summarization)
-  if (name === 'x_analyze_voice' || name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread') {
+  // Handle AI tools (generation, rewrite, summarization)
+  if (name === 'x_generate_tweet' || name === 'x_rewrite_tweet' || name === 'x_summarize_thread') {
     return await executeAITool(name, args);
   }
 
@@ -3641,62 +3619,33 @@ async function executePersonaTool(name, args) {
 }
 
 /**
- * Execute AI-specific tools (voice analysis, tweet generation, thread summarization)
+ * Execute AI-specific tools (tweet generation, thread summarization)
  */
 async function executeAITool(name, args) {
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
   switch (name) {
-    case 'x_analyze_voice': {
-      const ai = await import('../ai/index.js');
-      const scrapersMod = await import('../scrapers/index.js');
-      const scrapers = scrapersMod.default || scrapersMod;
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
-      if (SESSION_COOKIE) await scrapers.loginWithCookie(page, SESSION_COOKIE);
-      try {
-        const tweets = await scrapers.scrapeTweets(page, args.username, { limit: args.limit || 100 });
-        if (!tweets || tweets.length === 0) return { error: `No tweets found for @${args.username}` };
-        const profile = ai.analyzeVoice(args.username, tweets);
-        const summary = ai.summarizeVoiceProfile(profile);
-        return { username: args.username, voiceProfile: profile, summary };
-      } finally {
-        await browser.close();
-      }
-    }
-
     case 'x_generate_tweet': {
       if (!OPENROUTER_API_KEY) {
         return { error: 'OPENROUTER_API_KEY environment variable required for AI tweet generation. Get one free at https://openrouter.ai' };
       }
       const ai = await import('../ai/index.js');
-      const scrapersMod = await import('../scrapers/index.js');
-      const scrapers = scrapersMod.default || scrapersMod;
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
-      if (SESSION_COOKIE) await scrapers.loginWithCookie(page, SESSION_COOKIE);
-      try {
-        const tweets = await scrapers.scrapeTweets(page, args.username, { limit: 100 });
-        if (!tweets || tweets.length === 0) return { error: `No tweets found for @${args.username}` };
-        const voiceProfile = ai.analyzeVoice(args.username, tweets);
-        
-        if (args.type === 'thread') {
-          const result = await ai.generateThread(voiceProfile, {
-            topic: args.topic,
-            length: args.count || 5,
-          });
-          return { username: args.username, topic: args.topic, ...result };
-        }
-        
-        const result = await ai.generateTweet(voiceProfile, {
+
+      if (args.type === 'thread') {
+        const result = await ai.generateThread({
           topic: args.topic,
-          count: args.count || 3,
+          length: args.count || 5,
           style: args.style,
         });
-        return { username: args.username, topic: args.topic, ...result };
-      } finally {
-        await browser.close();
+        return { topic: args.topic, ...result };
       }
+
+      const result = await ai.generateTweet({
+        topic: args.topic,
+        count: args.count || 3,
+        style: args.style,
+      });
+      return { topic: args.topic, ...result };
     }
 
     case 'x_rewrite_tweet': {
@@ -3704,23 +3653,12 @@ async function executeAITool(name, args) {
         return { error: 'OPENROUTER_API_KEY environment variable required for AI tweet rewriting. Get one free at https://openrouter.ai' };
       }
       const ai = await import('../ai/index.js');
-      const scrapersMod = await import('../scrapers/index.js');
-      const scrapers = scrapersMod.default || scrapersMod;
-      const browser = await scrapers.createBrowser();
-      const page = await scrapers.createPage(browser);
-      if (SESSION_COOKIE) await scrapers.loginWithCookie(page, SESSION_COOKIE);
-      try {
-        const tweets = await scrapers.scrapeTweets(page, args.username, { limit: 100 });
-        if (!tweets || tweets.length === 0) return { error: `No tweets found for @${args.username}` };
-        const voiceProfile = ai.analyzeVoice(args.username, tweets);
-        const result = await ai.rewriteTweet(voiceProfile, args.text, {
-          goal: args.goal || 'more_engaging',
-          count: args.count || 3,
-        });
-        return { username: args.username, ...result };
-      } finally {
-        await browser.close();
-      }
+      const result = await ai.rewriteTweet(args.text, {
+        goal: args.goal || 'more_engaging',
+        count: args.count || 3,
+        style: args.style,
+      });
+      return result;
     }
 
     case 'x_summarize_thread': {
@@ -3935,9 +3873,9 @@ function printBanner(pluginCount, pluginToolCount) {
   // ── AI Tools Status ──
   if (OPENROUTER_API_KEY) {
     console.error('✅ AI tools enabled (OPENROUTER_API_KEY set)');
-    console.error('   x_analyze_voice, x_generate_tweet, x_summarize_thread');
+    console.error('   x_generate_tweet, x_rewrite_tweet, x_summarize_thread');
   } else {
-    console.error('ℹ️  AI tools disabled. Set OPENROUTER_API_KEY for voice analysis & tweet generation.');
+    console.error('ℹ️  AI tools disabled. Set OPENROUTER_API_KEY for tweet generation & summarization.');
     console.error('   Get a free key at https://openrouter.ai');
   }
 
@@ -3954,7 +3892,7 @@ function printBanner(pluginCount, pluginToolCount) {
     'Scraping':  ['x_get_profile', 'x_get_followers', 'x_get_following', 'x_get_tweets', 'x_search_tweets', 'x_get_thread', 'x_download_video'],
     'Analysis':  ['x_detect_unfollowers', 'x_analyze_sentiment', 'x_best_time_to_post', 'x_competitor_analysis', 'x_brand_monitor'],
     'Actions':   ['x_follow', 'x_unfollow', 'x_like', 'x_post_tweet', 'x_post_thread', 'x_reply'],
-    'AI':        ['x_analyze_voice', 'x_generate_tweet', 'x_summarize_thread'],
+    'AI':        ['x_generate_tweet', 'x_rewrite_tweet', 'x_summarize_thread'],
   };
 
   for (const [cat, tools] of Object.entries(categories)) {

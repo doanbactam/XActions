@@ -1395,23 +1395,9 @@ xactions platforms
 
 ## AI Writer Commands
 
-### xactions ai analyze
-
-Analyze a user's writing voice from their tweets.
-
-```bash
-xactions ai analyze <username> [options]
-```
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-l, --limit <n>` | Tweets to analyze | `100` |
-| `-o, --output <file>` | Save voice profile | — |
-| `--json` | JSON output | `false` |
-
 ### xactions ai generate
 
-Generate tweets or threads in a user's voice.
+Generate tweets or threads on a topic.
 
 ```bash
 xactions ai generate <topic> [options]
@@ -1419,16 +1405,15 @@ xactions ai generate <topic> [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-v, --voice <username>` | Voice to mimic | **required** |
 | `-c, --count <n>` | Number of variations | `3` |
-| `-s, --style <style>` | casual, professional, provocative | — |
+| `-s, --style <style>` | hot-take, educational, personal, promotional | — |
 | `-t, --type <type>` | tweet or thread | `tweet` |
 | `-m, --model <model>` | LLM model | auto |
 | `-k, --api-key <key>` | OpenRouter API key | from env |
 
 ### xactions ai rewrite
 
-Rewrite a tweet in a user's voice with a goal.
+Rewrite a tweet with a goal.
 
 ```bash
 xactions ai rewrite <text> [options]
@@ -1436,16 +1421,16 @@ xactions ai rewrite <text> [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-v, --voice <username>` | Voice to mimic | **required** |
-| `-g, --goal <goal>` | more_engaging, shorter, more_professional, funnier | `more_engaging` |
+| `-g, --goal <goal>` | more_engaging, shorter, add_hook, more_casual, more_formal, add_cta | `more_engaging` |
 | `-c, --count <n>` | Number of variations | `3` |
+| `-s, --style <style>` | hot-take, educational, personal, promotional | — |
 
 ### xactions ai calendar
 
 Generate a weekly content calendar.
 
 ```bash
-xactions ai calendar <username> [options]
+xactions ai calendar [options]
 ```
 
 | Option | Description | Default |
@@ -2202,10 +2187,9 @@ DEBUG=xactions:* xactions followers nichxbt
 | `diff` | Compare exports | `xactions diff export1/ export2/` |
 | `scrape` | Cross-platform scrape | `xactions scrape profile -p bluesky -u user` |
 | `platforms` | List platforms | `xactions platforms` |
-| `ai analyze` | Analyze writing voice | `xactions ai analyze nichxbt` |
-| `ai generate` | Generate tweets | `xactions ai generate "AI" -v nichxbt` |
-| `ai rewrite` | Rewrite tweet | `xactions ai rewrite "text" -v nichxbt` |
-| `ai calendar` | Content calendar | `xactions ai calendar nichxbt -d 7` |
+| `ai generate` | Generate tweets | `xactions ai generate "AI"` |
+| `ai rewrite` | Rewrite tweet | `xactions ai rewrite "text"` |
+| `ai calendar` | Content calendar | `xactions ai calendar -d 7` |
 | `optimize` | Optimize tweet | `xactions optimize "my tweet"` |
 | `hashtags` | Suggest hashtags | `xactions hashtags "my tweet" -n 5` |
 | `predict` | Predict performance | `xactions predict "my tweet"` |

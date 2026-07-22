@@ -61,7 +61,7 @@ const features = [
   { icon: '🔍', title: 'Scrape Anything', desc: 'Profiles, followers, tweets, threads, videos' },
   { icon: '🤖', title: '75+ MCP Tools', desc: 'Works with Claude, Cursor, Windsurf, GPT' },
   { icon: '📊', title: 'Analytics', desc: 'Best time to post, sentiment, competitors' },
-  { icon: '✍️', title: 'AI Writer', desc: 'Analyze voice → Generate tweets in their style' },
+  { icon: '✍️', title: 'AI Writer', desc: 'Generate tweets and threads from any topic' },
   { icon: '⚡', title: 'Actions', desc: 'Follow, unfollow, like, post, thread, DM' },
   { icon: '🌐', title: 'Multi-Platform', desc: 'Twitter, Bluesky, Mastodon, Threads' },
 ];
@@ -128,13 +128,13 @@ const CodeDemo = () => {
     '✅ Authenticated',
     '📋 Tools available: 77',
     '',
-    '> "Analyze @paulg\'s writing style"',
+    '> "Generate tweets about startups"',
     '',
-    '  Scraping 50 tweets...',
-    '  Analyzing voice profile...',
+    '  Picking a trending topic...',
+    '  Generating tweet variations...',
     '  Tone: Thoughtful, contrarian',
     '  Avg length: 142 chars',
-    '  ✅ Voice profile ready',
+    '  ✅ Tweets ready',
   ];
 
   const visibleLines = Math.min(lines.length, Math.floor(frame / 5));

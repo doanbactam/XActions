@@ -870,7 +870,7 @@ npx xactions mcp-config --client windsurf
 | **Analysis** | `x_detect_unfollowers`, `x_analyze_sentiment`, `x_best_time_to_post`, `x_competitor_analysis`, `x_brand_monitor`, `x_audience_insights`, `x_engagement_report`, `x_crypto_analyze` |
 | **Actions** | `x_follow`, `x_unfollow`, `x_like`, `x_post_tweet`, `x_post_thread`, `x_reply`, `x_retweet`, `x_quote_tweet`, `x_bookmark`, `x_send_dm`, `x_create_poll`, `x_delete_tweet` |
 | **Automation** | `x_auto_follow`, `x_follow_engagers`, `x_unfollow_all`, `x_smart_unfollow`, `x_auto_comment`, `x_auto_retweet`, `x_auto_like`, `x_unfollow_non_followers` |
-| **AI** | `x_analyze_voice`, `x_generate_tweet`, `x_summarize_thread`, `x_rewrite_tweet`, `x_detect_bots`, `x_find_influencers`, `x_smart_target`, `x_grok_analyze_image` |
+| **AI** | `x_generate_tweet`, `x_rewrite_tweet`, `x_summarize_thread`, `x_detect_bots`, `x_find_influencers`, `x_smart_target`, `x_grok_analyze_image` |
 | **Monitoring** | `x_monitor_account`, `x_monitor_keyword`, `x_follower_alerts`, `x_track_engagement`, `x_monitor_reputation`, `x_stream_start` |
 | **Workflows** | `x_workflow_create`, `x_workflow_run`, `x_workflow_list`, `x_workflow_actions` |
 | **Persona** | `x_persona_create`, `x_persona_run`, `x_persona_edit`, `x_persona_list`, `x_persona_presets` |
@@ -880,8 +880,8 @@ npx xactions mcp-config --client windsurf
 
 ### Example Prompts
 
-> **"Analyze @paulg's writing style and generate 3 tweet ideas about startups in his voice"**
-> → Scrapes tweets → analyzes voice → generates content with AI
+> **"Generate 3 tweet ideas about startups"**
+> → Generates content with AI
 
 > **"Find everyone I follow who doesn't follow me back, sorted by follower count"**
 > → Uses x_get_following + x_get_followers → computes diff → formats results

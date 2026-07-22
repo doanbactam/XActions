@@ -1816,77 +1816,19 @@ program
 
 const ai = program
   .command('ai')
-  .description('AI Tweet Writer — analyze voice, generate & rewrite tweets');
-
-ai
-  .command('analyze <username>')
-  .description('Analyze a user\'s writing voice from their tweets')
-  .option('-l, --limit <n>', 'Number of tweets to analyze', '100')
-  .option('-o, --output <file>', 'Save voice profile to file')
-  .option('--json', 'Output as JSON')
-  .action(async (username, options) => {
-    const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
-    if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
-      process.exit(1);
-    }
-    const spinner = ora(`Analyzing @${username}'s writing voice...`).start();
-    try {
-      const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
-      const { analyzeVoice, summarizeVoiceProfile } = await import('../ai/index.js');
-      const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, username, { limit: parseInt(options.limit) });
-      await browser.close();
-      if (!tweets || tweets.length === 0) {
-        spinner.fail(`No tweets found for @${username}`);
-        return;
-      }
-      spinner.text = `Analyzing ${tweets.length} tweets...`;
-      const profile = analyzeVoice(username, tweets);
-      spinner.succeed(`Voice analysis complete for @${username}`);
-
-      if (options.json) {
-        console.log(JSON.stringify(profile, null, 2));
-      } else {
-        const summary = summarizeVoiceProfile(profile);
-        console.log(chalk.bold(`\n🎤 Voice Profile: @${username}\n`));
-        console.log(summary);
-      }
-
-      if (options.output) {
-        await fs.writeFile(options.output, JSON.stringify(profile, null, 2));
-        console.log(chalk.green(`\n✓ Voice profile saved to ${options.output}`));
-      }
-    } catch (error) {
-      spinner.fail('Voice analysis failed');
-      console.error(chalk.red(error.message));
-    }
-  });
+  .description('AI Tweet Writer — generate & rewrite tweets');
 
 ai
   .command('generate <topic>')
-  .description('Generate tweets in a user\'s voice')
-  .option('-v, --voice <username>', 'Username whose voice to mimic (required)')
+  .description('Generate tweets on a topic')
   .option('-c, --count <n>', 'Number of tweets to generate', '3')
-  .option('-s, --style <style>', 'Style: casual, professional, provocative')
+  .option('-s, --style <style>', 'Style: hot-take, educational, personal, promotional')
   .option('-t, --type <type>', 'Type: tweet or thread', 'tweet')
   .option('-m, --model <model>', 'OpenRouter model to use')
   .option('-k, --api-key <key>', 'OpenRouter API key (or set OPENROUTER_API_KEY)')
   .action(async (topic, options) => {
-    if (!options.voice) {
-      console.error(chalk.red('✗ --voice <username> is required'));
-      process.exit(1);
-    }
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
-    if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
-      process.exit(1);
-    }
     if (!apiKey) {
       console.error(chalk.red('✗ OpenRouter API key required. Set OPENROUTER_API_KEY or use --api-key'));
       process.exit(1);
@@ -1894,32 +1836,20 @@ ai
     process.env.OPENROUTER_API_KEY = apiKey;
     if (options.model) process.env.OPENROUTER_MODEL = options.model;
 
-    const spinner = ora(`Scraping @${options.voice}'s tweets...`).start();
+    const spinner = ora(`Generating ${options.type === 'thread' ? 'thread' : 'tweets'} about "${topic}"...`).start();
     try {
-      const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
-      const { analyzeVoice, generateTweet, generateThread } = await import('../ai/index.js');
-      const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
-      await browser.close();
-      if (!tweets || tweets.length === 0) {
-        spinner.fail(`No tweets found for @${options.voice}`);
-        return;
-      }
-      const voiceProfile = analyzeVoice(options.voice, tweets);
-      spinner.text = `Generating ${options.type === 'thread' ? 'thread' : 'tweets'} about "${topic}"...`;
+      const { generateTweet, generateThread } = await import('../ai/index.js');
 
       if (options.type === 'thread') {
-        const result = await generateThread(voiceProfile, { topic, length: parseInt(options.count) });
+        const result = await generateThread({ topic, length: parseInt(options.count), style: options.style });
         spinner.succeed('Thread generated!');
         console.log(chalk.bold(`\n🧵 Thread: ${topic}\n`));
         result.thread.forEach((t, i) => {
-          console.log(chalk.cyan(`  ${i + 1}/${result.thread.length}`) + ` ${t}`);
+          console.log(chalk.cyan(`  ${i + 1}/${result.thread.length}`) + ` ${t.text || t}`);
           console.log();
         });
       } else {
-        const result = await generateTweet(voiceProfile, {
+        const result = await generateTweet({
           topic,
           count: parseInt(options.count),
           style: options.style,
@@ -1927,7 +1857,7 @@ ai
         spinner.succeed('Tweets generated!');
         console.log(chalk.bold(`\n✍️  Generated Tweets: ${topic}\n`));
         result.tweets.forEach((t, i) => {
-          console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t}`);
+          console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t.text || t}`);
           console.log();
         });
       }
@@ -1939,24 +1869,15 @@ ai
 
 ai
   .command('rewrite <text>')
-  .description('Rewrite a tweet in a user\'s voice')
-  .option('-v, --voice <username>', 'Username whose voice to mimic (required)')
-  .option('-g, --goal <goal>', 'Goal: more_engaging, shorter, more_professional, funnier', 'more_engaging')
+  .description('Rewrite a tweet')
+  .option('-g, --goal <goal>', 'Goal: more_engaging, shorter, add_hook, more_casual, more_formal, add_cta', 'more_engaging')
   .option('-c, --count <n>', 'Number of variations', '3')
+  .option('-s, --style <style>', 'Style: hot-take, educational, personal, promotional')
   .option('-m, --model <model>', 'OpenRouter model to use')
   .option('-k, --api-key <key>', 'OpenRouter API key (or set OPENROUTER_API_KEY)')
   .action(async (text, options) => {
-    if (!options.voice) {
-      console.error(chalk.red('✗ --voice <username> is required'));
-      process.exit(1);
-    }
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
-    if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
-      process.exit(1);
-    }
     if (!apiKey) {
       console.error(chalk.red('✗ OpenRouter API key required. Set OPENROUTER_API_KEY or use --api-key'));
       process.exit(1);
@@ -1964,30 +1885,19 @@ ai
     process.env.OPENROUTER_API_KEY = apiKey;
     if (options.model) process.env.OPENROUTER_MODEL = options.model;
 
-    const spinner = ora(`Scraping @${options.voice}'s tweets...`).start();
+    const spinner = ora('Rewriting tweet...').start();
     try {
-      const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
-      const { analyzeVoice, rewriteTweet } = await import('../ai/index.js');
-      const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, options.voice, { limit: 100 });
-      await browser.close();
-      if (!tweets || tweets.length === 0) {
-        spinner.fail(`No tweets found for @${options.voice}`);
-        return;
-      }
-      const voiceProfile = analyzeVoice(options.voice, tweets);
-      spinner.text = 'Rewriting tweet...';
-      const result = await rewriteTweet(voiceProfile, text, {
+      const { rewriteTweet } = await import('../ai/index.js');
+      const result = await rewriteTweet(text, {
         goal: options.goal,
         count: parseInt(options.count),
+        style: options.style,
       });
       spinner.succeed('Tweet rewritten!');
       console.log(chalk.bold('\n✏️  Rewritten Variations:\n'));
       console.log(chalk.gray(`  Original: ${text}\n`));
       result.rewrites.forEach((t, i) => {
-        console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t}`);
+        console.log(chalk.cyan(`  ${i + 1}.`) + ` ${t.text || t}`);
         console.log();
       });
     } catch (error) {
@@ -1997,7 +1907,7 @@ ai
   });
 
 ai
-  .command('calendar <username>')
+  .command('calendar')
   .description('Generate a content calendar for the week')
   .option('-d, --days <n>', 'Number of days', '7')
   .option('-p, --posts-per-day <n>', 'Posts per day', '3')
@@ -2005,14 +1915,9 @@ ai
   .option('-o, --output <file>', 'Save calendar to file')
   .option('-m, --model <model>', 'OpenRouter model to use')
   .option('-k, --api-key <key>', 'OpenRouter API key (or set OPENROUTER_API_KEY)')
-  .action(async (username, options) => {
+  .action(async (options) => {
     const config = await loadConfig();
-    const token = config.auth_token || process.env.TWITTER_AUTH_TOKEN;
     const apiKey = options.apiKey || config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
-    if (!token) {
-      console.error(chalk.red('✗ Auth token required. Run: xactions config --token <auth_token>'));
-      process.exit(1);
-    }
     if (!apiKey) {
       console.error(chalk.red('✗ OpenRouter API key required. Set OPENROUTER_API_KEY or use --api-key'));
       process.exit(1);
@@ -2020,37 +1925,23 @@ ai
     process.env.OPENROUTER_API_KEY = apiKey;
     if (options.model) process.env.OPENROUTER_MODEL = options.model;
 
-    const spinner = ora(`Scraping @${username}'s tweets...`).start();
+    const topics = options.topics ? options.topics.split(',').map(t => t.trim()) : undefined;
+    const spinner = ora(`Generating ${options.days}-day content calendar...`).start();
     try {
-      const { scrapeTweets, createBrowser, createPage, loginWithCookie } = scrapers;
-      const { analyzeVoice, generateWeek } = await import('../ai/index.js');
-      const browser = await createBrowser();
-      const page = await createPage(browser);
-      await loginWithCookie(page, token);
-      const tweets = await scrapeTweets(page, username, { limit: 100 });
-      await browser.close();
-      if (!tweets || tweets.length === 0) {
-        spinner.fail(`No tweets found for @${username}`);
-        return;
-      }
-      const voiceProfile = analyzeVoice(username, tweets);
-      const topics = options.topics ? options.topics.split(',').map(t => t.trim()) : undefined;
-      spinner.text = `Generating ${options.days}-day content calendar...`;
-      const result = await generateWeek(voiceProfile, {
+      const { generateWeek } = await import('../ai/index.js');
+      const result = await generateWeek({
         topics,
         postsPerDay: parseInt(options.postsPerDay),
         days: parseInt(options.days),
       });
       spinner.succeed('Content calendar generated!');
-      console.log(chalk.bold(`\n📅 Content Calendar for @${username}\n`));
-      for (const day of result.calendar) {
-        console.log(chalk.cyan.bold(`  ${day.day}`));
-        day.posts.forEach((post, i) => {
-          const typeIcon = post.type === 'thread' ? '🧵' : '📝';
-          console.log(`    ${typeIcon} ${chalk.gray(post.time || '')} ${post.topic}`);
-          console.log(`       ${post.content}`);
-          console.log();
-        });
+      console.log(chalk.bold(`\n📅 Content Calendar\n`));
+      for (const post of result.calendar) {
+        console.log(chalk.cyan.bold(`  ${post.day} — ${post.slot}`));
+        const typeIcon = post.type === 'thread' ? '🧵' : '📝';
+        console.log(`    ${typeIcon} ${chalk.gray(post.topic || '')}`);
+        console.log(`       ${post.text}`);
+        console.log();
       }
 
       if (options.output) {
@@ -2143,7 +2034,7 @@ personaCmd
         { type: 'input', name: 'topics', message: '📌 Topics (comma-separated):', },
         { type: 'input', name: 'searchTerms', message: '🔍 Search terms (comma-separated):', },
         { type: 'input', name: 'targetAccounts', message: '🎯 Target accounts to study (comma-separated, no @):', },
-        { type: 'input', name: 'tone', message: '🎭 Describe your tone/voice:', default: 'casual, knowledgeable, authentic' },
+        { type: 'input', name: 'tone', message: '🎭 Describe your tone:', default: 'casual, knowledgeable, authentic' },
       ]);
       customTopics = customAnswers.topics.split(',').map(t => t.trim()).filter(Boolean);
       customSearchTerms = customAnswers.searchTerms.split(',').map(t => t.trim()).filter(Boolean);

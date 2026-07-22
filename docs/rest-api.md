@@ -1064,16 +1064,13 @@ POST /api/ai/analyze/profile     { "username": "nichxbt" }
 
 ## AI Writer
 
-AI-powered content generation using voice analysis.
+AI-powered content generation.
 
 ```http
-POST /api/ai/writer/analyze-voice    { "username": "nichxbt" }
-POST /api/ai/writer/generate         { "username": "nichxbt", "topic": "AI tools" }
+POST /api/ai/writer/generate         { "topic": "AI tools" }
 POST /api/ai/writer/rewrite          { "text": "Original tweet", "style": "engaging" }
-POST /api/ai/writer/calendar         { "username": "nichxbt", "topics": ["AI", "automation"] }
-POST /api/ai/writer/reply            { "tweetUrl": "https://...", "tone": "friendly" }
-GET  /api/ai/writer/voice-profiles
-GET  /api/ai/writer/voice-profiles/:username
+POST /api/ai/writer/calendar         { "topics": ["AI", "automation"] }
+POST /api/ai/writer/reply            { "originalTweet": "https://...", "tone": "friendly" }
 ```
 
 ---

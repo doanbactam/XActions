@@ -349,8 +349,7 @@ export const AI_OPERATION_PRICES = {
   'article:analytics': '$0.01',      // Article analytics
 
   // Writer operations
-  'writer:analyze-voice': '$0.02',   // Analyze writing voice
-  'writer:generate': '$0.01',        // Generate tweets in voice
+  'writer:generate': '$0.01',        // Generate tweets
   'writer:rewrite': '$0.005',        // Rewrite/improve tweet
   'writer:calendar': '$0.02',        // Generate content calendar
   'writer:reply': '$0.005',          // Generate reply
@@ -562,7 +561,6 @@ export const AI_OPERATION_PRICES = {
   'analytics:snapshot': '$0.005',     // Take snapshot
   'analytics:growth-rate': '$0.005',  // Growth rate
   'analytics:compare-accounts': '$0.01', // Compare accounts
-  'analytics:analyze-voice': '$0.02', // Voice analysis
   'analytics:generate-tweet': '$0.01', // Generate tweet
   'analytics:rewrite-tweet': '$0.005', // Rewrite tweet
   'analytics:summarize-thread': '$0.01', // Summarize thread
