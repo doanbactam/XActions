@@ -78,8 +78,14 @@ jobs:
         run: npx prisma db push --skip-generate
         if: failure()
 
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
       - name: Run tests
-        run: npm test
+        run: npm run test:ci
 
   build:
     name: Build Check

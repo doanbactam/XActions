@@ -203,9 +203,9 @@ export class Scheduler extends EventEmitter {
   // ── Internal ──
 
   _registerJob(config) {
-    const task = cron.schedule(config.cron, () => {
+    const task = cron.createTask(config.cron, () => {
       this._executeJob(this.jobs.get(config.name));
-    }, { scheduled: false });
+    });
 
     this.jobs.set(config.name, {
       config,

@@ -47,7 +47,7 @@ fi
 
 # 3. Install dependencies
 echo "📦 Installing dependencies..."
-npm install
+npm ci
 
 # 4. Generate Prisma client + push schema
 echo "🗄️  Setting up database schema..."

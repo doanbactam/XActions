@@ -32,6 +32,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 // ============================================================================
 // Plugin System
@@ -4090,13 +4091,17 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('❌ Fatal error:', error.message);
-  if (process.env.DEBUG) {
-    console.error(error.stack);
-  }
-  process.exit(1);
-});
+// Only start the server when this module is the entry point.
+// This lets tests import TOOLS without launching the stdio transport.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error('❌ Fatal error:', error.message);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  });
+}
 
 // Export for testing without starting the stdio transport
 export { TOOLS };
