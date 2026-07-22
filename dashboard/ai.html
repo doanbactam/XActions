@@ -898,12 +898,19 @@
     </aside>
   </div>
 
+  <script src="/js/config.js"></script>
+  <script>requireAuth();</script>
+
   <!-- ==================== JavaScript ==================== -->
   <script>
     // ====== State ======
-    const API_BASE = window.location.origin;
-    let savedProfiles = {};
+    const API_BASE = CONFIG.API_BASE; // '/api' on prod, 'http://localhost:3001/api' locally
+    let savedProfiles = JSON.parse(localStorage.getItem('xactions_ai_profiles') || '{}');
     let currentCalendar = null;
+
+    function persistProfiles() {
+      localStorage.setItem('xactions_ai_profiles', JSON.stringify(savedProfiles));
+    }
 
     // ====== Tab Navigation ======
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -940,17 +947,16 @@
       document.getElementById('voice-result').style.display = 'none';
 
       try {
-        const res = await fetch(`${API_BASE}/api/ai/writer/analyze-voice`, {
+        const data = await apiRequest('/ai/writer/analyze-voice', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, authToken, tweetLimit: 200 }),
         });
-        const data = await res.json();
 
         if (!data.success) throw new Error(data.error || data.message || 'Analysis failed');
 
         const profile = data.data.profile;
         savedProfiles[username.toLowerCase()] = profile;
+        persistProfiles();
         renderVoiceProfile(profile);
         updateProfileSelectors();
       } catch (err) {
@@ -1069,25 +1075,23 @@
         let endpoint, body;
 
         if (type === 'rewrite') {
-          endpoint = '/api/ai/writer/rewrite';
+          endpoint = '/ai/writer/rewrite';
           body = { username: profileKey, text: topic, goal: document.getElementById('gen-rewrite-goal').value, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         } else if (type === 'reply') {
-          endpoint = '/api/ai/writer/reply';
+          endpoint = '/ai/writer/reply';
           body = { username: profileKey, originalTweet: topic, tone: document.getElementById('gen-reply-tone').value || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         } else if (type === 'thread') {
-          endpoint = '/api/ai/writer/generate';
+          endpoint = '/ai/writer/generate';
           body = { username: profileKey, topic, type: 'thread', threadLength: count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         } else {
-          endpoint = '/api/ai/writer/generate';
+          endpoint = '/ai/writer/generate';
           body = { username: profileKey, topic, style: style || undefined, count, apiKey: apiKey || undefined, model: model || undefined, voiceProfile };
         }
 
-        const res = await fetch(`${API_BASE}${endpoint}`, {
+        const data = await apiRequest(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        const data = await res.json();
 
         if (!data.success) throw new Error(data.error || data.message || 'Generation failed');
 
@@ -1149,12 +1153,10 @@
       document.getElementById('cal-grid').style.display = 'none';
 
       try {
-        const res = await fetch(`${API_BASE}/api/ai/writer/calendar`, {
+        const data = await apiRequest('/ai/writer/calendar', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: profileKey, topics, postsPerDay, days, voiceProfile }),
         });
-        const data = await res.json();
 
         if (!data.success) throw new Error(data.error || data.message || 'Calendar generation failed');
 
@@ -1251,6 +1253,9 @@
       if (!str) return '';
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+
+    // Initialize profile selectors from localStorage on page load
+    updateProfileSelectors();
   </script>
 
   <style>

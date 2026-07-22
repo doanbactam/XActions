@@ -71,9 +71,26 @@ router.post('/analyze-voice', generationLimiter, async (req, res) => {
       });
     }
 
-    // Step 1: Scrape tweets
-    const { scrapeTweets } = await import('../../src/scrapers/index.js');
-    const tweets = await scrapeTweets(username, authToken, { limit: tweetLimit });
+    // Step 1: Scrape tweets with a real browser session
+    const {
+      createBrowser,
+      createPage,
+      loginWithCookie,
+      scrapeTweets,
+    } = await import('../../src/scrapers/index.js');
+
+    let browser;
+    let tweets = [];
+    try {
+      browser = await createBrowser({ headless: true });
+      const page = await createPage(browser);
+      await loginWithCookie(page, authToken);
+      tweets = await scrapeTweets(page, username, { limit: tweetLimit });
+    } finally {
+      if (browser) {
+        try { await browser.close(); } catch {}
+      }
+    }
 
     if (!tweets || tweets.length === 0) {
       return res.status(404).json({
@@ -167,6 +184,13 @@ router.post('/generate', generationLimiter, async (req, res) => {
       });
     }
   } catch (error) {
+    if (error.message?.includes('OpenRouter API key required')) {
+      return res.status(400).json({
+        error: 'AI_API_KEY_REQUIRED',
+        message: error.message,
+        hint: 'Pass an OpenRouter apiKey in the request or set OPENROUTER_API_KEY on the server',
+      });
+    }
     res.status(500).json({
       error: 'Generation failed',
       message: error.message,
@@ -213,6 +237,13 @@ router.post('/rewrite', generationLimiter, async (req, res) => {
       operation: 'ai:rewrite-tweet',
     });
   } catch (error) {
+    if (error.message?.includes('OpenRouter API key required')) {
+      return res.status(400).json({
+        error: 'AI_API_KEY_REQUIRED',
+        message: error.message,
+        hint: 'Pass an OpenRouter apiKey in the request or set OPENROUTER_API_KEY on the server',
+      });
+    }
     res.status(500).json({
       error: 'Rewrite failed',
       message: error.message,
@@ -255,6 +286,13 @@ router.post('/calendar', generationLimiter, async (req, res) => {
       operation: 'ai:generate-calendar',
     });
   } catch (error) {
+    if (error.message?.includes('OpenRouter API key required')) {
+      return res.status(400).json({
+        error: 'AI_API_KEY_REQUIRED',
+        message: error.message,
+        hint: 'Pass an OpenRouter apiKey in the request or set OPENROUTER_API_KEY on the server',
+      });
+    }
     res.status(500).json({
       error: 'Calendar generation failed',
       message: error.message,
@@ -301,6 +339,13 @@ router.post('/reply', generationLimiter, async (req, res) => {
       operation: 'ai:generate-reply',
     });
   } catch (error) {
+    if (error.message?.includes('OpenRouter API key required')) {
+      return res.status(400).json({
+        error: 'AI_API_KEY_REQUIRED',
+        message: error.message,
+        hint: 'Pass an OpenRouter apiKey in the request or set OPENROUTER_API_KEY on the server',
+      });
+    }
     res.status(500).json({
       error: 'Reply generation failed',
       message: error.message,
