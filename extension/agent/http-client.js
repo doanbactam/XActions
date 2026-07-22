@@ -126,9 +126,16 @@
   function extractUsername(input) {
     if (!input) return null;
     const s = String(input).trim().replace(/^@/, '');
-    if (/^[a-zA-Z0-9_]{1,15}$/.test(s)) return s;
-    const m = String(input).match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]{1,15})/);
-    return m ? m[1] : null;
+    if (/^[a-zA-Z0-9_]{1,15}$/i.test(s)) return s.toLowerCase();
+    const m = String(input).match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]{1,15})(?:\/|\?|#|$)/);
+    if (m) {
+      const reserved = new Set([
+        'i', 'home', 'search', 'explore', 'notifications', 'messages',
+        'settings', 'compose', 'login', 'logout', 'signup', 'share', 'intent', 'account',
+      ]);
+      if (!reserved.has(m[1].toLowerCase())) return m[1].toLowerCase();
+    }
+    return null;
   }
 
   class HttpError extends Error {
@@ -193,7 +200,7 @@
       if (authenticated && this.isAuthenticated()) {
         headers['x-csrf-token'] = this.getCsrfToken();
         headers['x-twitter-auth-type'] = 'OAuth2Session';
-        headers.cookie = this.getCookieString();
+        // Cookies are attached automatically by fetch with credentials: 'include'.
       }
       return headers;
     }
@@ -207,7 +214,7 @@
       let lastError;
       for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
         try {
-          const res = await this._fetch(url, { method, headers, body });
+          const res = await this._fetch(url, { method, headers, body, credentials: 'include' });
           if (this._debug) console.log(`[XActionsHttpClient] ${method} ${url} → ${res.status}`);
 
           if (res.status === 429) {
@@ -311,7 +318,8 @@
       const data = await this.graphql(GRAPHQL.TweetDetail.queryId, GRAPHQL.TweetDetail.operationName, {
         focalTweetId: id,
         with_rux_injections: false,
-        includePromotedContent: false,
+        rankingMode: 'Relevance',
+        includePromotedContent: true,
         withCommunity: true,
         withQuickPromoteEligibilityTweetFields: true,
         withBirdwatchNotes: true,
@@ -381,8 +389,17 @@
     }
 
     _tweetFromGraphQL(result, fallbackId) {
-      const t = result.tweet || result;
-      const legacy = t.legacy || {};
+      const typename = result?.__typename;
+      if (typename === 'TweetTombstone') {
+        return {
+          id: fallbackId || null,
+          text: result.tombstone?.text?.text || '[Unavailable]',
+          tombstone: true,
+        };
+      }
+      const t = result?.tweet || result;
+      const legacy = t?.legacy;
+      if (!legacy) return null;
       const author = t.core?.user_results?.result?.legacy || {};
       return {
         id: t.rest_id || legacy.id_str || fallbackId,
@@ -450,10 +467,12 @@
     }
 
     async sendQuoteTweet(text, quotedTweetId, mediaIds = []) {
+      const quotedId = extractTweetId(quotedTweetId);
+      if (!quotedId) throw new HttpError('Invalid quoted tweet id', { code: 'INVALID_ARGS' });
       const variables = {
         tweet_text: text,
         dark_request: false,
-        attachment_url: `https://x.com/i/status/${extractTweetId(quotedTweetId)}`,
+        attachment_url: `https://x.com/i/status/${quotedId}`,
         media: { media_entities: mediaIds.map((id) => ({ media_id: id, tagged_users: [] })), possibly_sensitive: false },
         semantic_annotation_ids: [],
       };

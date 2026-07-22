@@ -633,20 +633,10 @@
       return runLlmTool(n, a, ctx);
     }
 
-    // ── HTTP-backed tools (no tab required) ──
-    if (HTTP_TOOL_NAMES.has(n) && ctx.getHttpClient) {
-      try {
-        const client = await ctx.getHttpClient();
-        if (client?.isAuthenticated?.()) {
-          const r = await runHttpTool(client, n, a);
-          if (r) return r;
-        }
-      } catch (err) {
-        console.warn(`[XActionsTools] HTTP tool ${n} failed, falling back to page tool:`, err.message || err);
-      }
-    }
-
     // ── Page (all remaining x_* tools) ──
+    // HTTP-backed tools are handled by the hybrid pageTool wrapper injected
+    // from the service worker (runHybridPageTool) so the HTTP path is tried
+    // once and only falls back to the DOM when necessary.
     if (!ctx.pageTool) return { error: 'Open x.com tab for page tools' };
     return ctx.pageTool(n, a);
   }
@@ -680,6 +670,7 @@
     systemPrompt,
     executeTool,
     runHttpTool,
+    HTTP_TOOL_NAMES,
     AUTOMATION_IDS,
     AUTO_MAP,
   };

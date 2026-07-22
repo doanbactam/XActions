@@ -389,7 +389,8 @@ async function getHttpClient() {
 async function runHybridPageTool(name, args) {
   // Prefer the internal HTTP API when cookies are available so the user
   // does not need a visible x.com tab for single actions.
-  if (globalThis.XActionsTools?.runHttpTool) {
+  const httpToolNames = globalThis.XActionsTools?.HTTP_TOOL_NAMES;
+  if (httpToolNames?.has?.(name) && globalThis.XActionsTools?.runHttpTool) {
     try {
       const client = await getHttpClient();
       if (client?.isAuthenticated?.()) {
@@ -420,7 +421,6 @@ function buildAgentCtx(cfg, storage) {
     },
     navigateTab: (url) => navigateXTab(url, { background }),
     pageTool: (name, args) => runHybridPageTool(name, args),
-    getHttpClient,
     toolCatalog: () => globalThis.XActionsCatalog,
     persona: cfg.persona,
     safety: cfg.safety,
