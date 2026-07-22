@@ -53,6 +53,8 @@ jobs:
       SESSION_SECRET: ci-test-session-secret
       REDIS_HOST: localhost
       REDIS_PORT: 6379
+      PUPPETEER_SKIP_DOWNLOAD: true
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
     steps:
       - name: Checkout
@@ -78,13 +80,23 @@ jobs:
         run: npx prisma db push --skip-generate
         if: failure()
 
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
       - name: Run tests
-        run: npm test
+        run: npm run test:ci
 
   build:
     name: Build Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: true
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
 
     steps:
       - name: Checkout

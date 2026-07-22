@@ -5,10 +5,10 @@
   "homepage": "https://xactions.app",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nirholas/xactions.git"
+    "url": "https://github.com/doanbactam/XActions.git"
   },
   "bugs": {
-    "url": "https://github.com/nirholas/xactions/issues"
+    "url": "https://github.com/doanbactam/XActions/issues"
   },
   "type": "module",
   "main": "src/index.js",
@@ -48,7 +48,11 @@
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
+    "lint": "eslint src api extension",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:node": "node --test tests/mcp/server.test.js",
+    "test:ci": "npm run test && npm run test:phase-a && npm run test:phase-b && npm run test:node",
     "test:phase-a": "node --test tests/api/sessionCrypto.test.js tests/docs/saas-backend-agent-design.test.js",
     "test:phase-b": "node --test tests/api/agentTools.test.js tests/api/sessionCrypto.test.js",
     "test:watch": "vitest",
@@ -109,8 +113,8 @@
     "inquirer": "^9.2.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^9.0.3",
     "ora": "^8.0.0",
     "prisma": "^5.7.1",
     "puppeteer": "^24.34.0",
@@ -129,12 +133,24 @@
     "viem": "^2.0.0",
     "xspace-agent": "^0.1.0"
   },
+  "overrides": {
+    "@hono/node-server": "^2.0.5",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0",
+    "vite": "^6.4.3"
+  },
   "devDependencies": {
-    "jsdom": "^28.1.0",
+    "@eslint/js": "^9.17.0",
+    "@types/chrome": "^0.0.280",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "jsdom": "^26.1.0",
     "marked": "^17.0.3",
     "nodemon": "^3.0.2",
-    "supertest": "^6.3.4",
-    "vitest": "^4.0.18"
+    "supertest": "^7.1.3",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   },
   "author": {
     "name": "nich",
@@ -190,7 +206,7 @@
     "x-algorithm"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "src",

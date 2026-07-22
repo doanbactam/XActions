@@ -32,6 +32,8 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 // ============================================================================
 // Plugin System
@@ -4090,13 +4092,27 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('❌ Fatal error:', error.message);
-  if (process.env.DEBUG) {
-    console.error(error.stack);
+// Only start the server when this module is the entry point.
+// This lets tests import TOOLS without launching the stdio transport.
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry || entry === '-' || entry.startsWith('[')) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    return false;
   }
-  process.exit(1);
-});
+}
+
+if (isMainModule()) {
+  main().catch((error) => {
+    console.error('❌ Fatal error:', error.message);
+    if (process.env.DEBUG) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  });
+}
 
 // Export for testing without starting the stdio transport
 export { TOOLS };
