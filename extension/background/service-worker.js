@@ -6,6 +6,7 @@ importScripts(
   '../agent/catalog.js',
   '../agent/xai-oauth.js',
   '../agent/llm.js',
+  '../agent/http-client.js',
   '../agent/tools.js',
   '../agent/agent-core.js',
   '../agent/strategist.js',
@@ -368,6 +369,40 @@ async function testAgentLlm(configOverride) {
   }
 }
 
+async function getHttpClient() {
+  const client = new globalThis.XActionsHttpClient.HttpClient({ debug: false });
+  try {
+    const cookies = await chrome.cookies.getAll({ url: 'https://x.com' });
+    if (cookies?.length) {
+      client.setCookies(cookies);
+    } else {
+      // Fallback: try twitter.com cookie jar
+      const twCookies = await chrome.cookies.getAll({ url: 'https://twitter.com' });
+      if (twCookies?.length) client.setCookies(twCookies);
+    }
+  } catch (err) {
+    console.warn('[XActions SW] Could not read x.com cookies:', err.message || err);
+  }
+  return client;
+}
+
+async function runHybridPageTool(name, args) {
+  // Prefer the internal HTTP API when cookies are available so the user
+  // does not need a visible x.com tab for single actions.
+  if (globalThis.XActionsTools?.runHttpTool) {
+    try {
+      const client = await getHttpClient();
+      if (client?.isAuthenticated?.()) {
+        const r = await globalThis.XActionsTools.runHttpTool(client, name, args || {});
+        if (r) return r;
+      }
+    } catch (err) {
+      console.warn(`[XActions SW] HTTP path for ${name} failed, falling back to page:`, err.message || err);
+    }
+  }
+  return runPageTool(name, args);
+}
+
 function buildAgentCtx(cfg, storage) {
   const background = cfg.background ?? state.backgroundMode;
   return {
@@ -384,7 +419,8 @@ function buildAgentCtx(cfg, storage) {
       await chrome.storage.local.set({ agentSafety: safety });
     },
     navigateTab: (url) => navigateXTab(url, { background }),
-    pageTool: (name, args) => runPageTool(name, args),
+    pageTool: (name, args) => runHybridPageTool(name, args),
+    getHttpClient,
     toolCatalog: () => globalThis.XActionsCatalog,
     persona: cfg.persona,
     safety: cfg.safety,
@@ -489,7 +525,7 @@ async function runAgentStrategy(message) {
       llmConfig,
       persona: cfg.persona,
       safety: cfg.safety,
-      pageTool: (name, args) => runPageTool(name, args),
+      pageTool: (name, args) => runHybridPageTool(name, args),
       languageHint:
         message.languageHint ||
         'executiveBrief and user-facing text in Vietnamese. JSON keys English.',

@@ -43,6 +43,31 @@
     update_persona: 'x_update_persona',
   };
 
+  // Tools that can run over the internal HTTP API without a visible x.com tab.
+  const HTTP_TOOL_NAMES = new Set([
+    'x_like',
+    'x_unlike',
+    'x_retweet',
+    'x_unretweet',
+    'x_bookmark',
+    'x_unbookmark',
+    'x_follow',
+    'x_unfollow',
+    'x_mute_user',
+    'x_unmute_user',
+    'x_block_user',
+    'x_unblock_user',
+    'x_post_tweet',
+    'x_reply',
+    'x_quote_tweet',
+    'x_delete_tweet',
+    'x_pin_tweet',
+    'x_unpin_tweet',
+    'x_get_profile_stats',
+    'x_get_tweet_detail',
+    'x_search_tweets',
+  ]);
+
   function getDefs() {
     return globalThis.XActionsCatalog?.TOOL_DEFINITIONS || [];
   }
@@ -284,6 +309,121 @@
     }
   }
 
+  function extractIdOrUrl(args) {
+    return args.tweetId || args.id || args.url || args.tweet || '';
+  }
+
+  function extractText(args) {
+    return args.text || args.content || args.message || args.body || '';
+  }
+
+  function extractUsername(args) {
+    return args.username || args.user || args.handle || args.screenName || '';
+  }
+
+  async function runHttpTool(client, name, a) {
+    if (!client?.isAuthenticated()) {
+      throw new Error('HTTP client not authenticated');
+    }
+    switch (name) {
+      case 'x_like': {
+        await client.likeTweet(extractIdOrUrl(a));
+        return { success: true, action: 'like', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_unlike': {
+        await client.unlikeTweet(extractIdOrUrl(a));
+        return { success: true, action: 'unlike', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_retweet': {
+        await client.retweet(extractIdOrUrl(a));
+        return { success: true, action: 'retweet', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_unretweet': {
+        await client.unretweet(extractIdOrUrl(a));
+        return { success: true, action: 'unretweet', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_bookmark': {
+        await client.bookmarkTweet(extractIdOrUrl(a));
+        return { success: true, action: 'bookmark', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_unbookmark': {
+        await client.unbookmarkTweet(extractIdOrUrl(a));
+        return { success: true, action: 'unbookmark', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_follow': {
+        await client.followUser(extractUsername(a));
+        return { success: true, action: 'follow', user: extractUsername(a) };
+      }
+      case 'x_unfollow': {
+        await client.unfollowUser(extractUsername(a));
+        return { success: true, action: 'unfollow', user: extractUsername(a) };
+      }
+      case 'x_mute_user': {
+        await client.muteUser(extractUsername(a));
+        return { success: true, action: 'mute', user: extractUsername(a) };
+      }
+      case 'x_unmute_user': {
+        await client.unmuteUser(extractUsername(a));
+        return { success: true, action: 'unmute', user: extractUsername(a) };
+      }
+      case 'x_block_user': {
+        await client.blockUser(extractUsername(a));
+        return { success: true, action: 'block', user: extractUsername(a) };
+      }
+      case 'x_unblock_user': {
+        await client.unblockUser(extractUsername(a));
+        return { success: true, action: 'unblock', user: extractUsername(a) };
+      }
+      case 'x_post_tweet': {
+        const tweet = await client.sendTweet(extractText(a));
+        return { success: true, action: 'post', tweetId: tweet.id, text: tweet.text };
+      }
+      case 'x_reply': {
+        const text = extractText(a);
+        const replyTo = extractIdOrUrl(a);
+        const tweet = await client.sendTweet(text, { replyTo });
+        return { success: true, action: 'reply', tweetId: tweet.id, text: tweet.text, replyTo };
+      }
+      case 'x_quote_tweet': {
+        const text = extractText(a);
+        const quoted = extractIdOrUrl(a);
+        const tweet = await client.sendQuoteTweet(text, quoted);
+        return { success: true, action: 'quote', tweetId: tweet.id, text: tweet.text, quoted };
+      }
+      case 'x_delete_tweet': {
+        await client.deleteTweet(extractIdOrUrl(a));
+        return { success: true, action: 'delete', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_pin_tweet': {
+        await client.pinTweet(extractIdOrUrl(a));
+        return { success: true, action: 'pin', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_unpin_tweet': {
+        await client.unpinTweet(extractIdOrUrl(a));
+        return { success: true, action: 'unpin', tweet: extractIdOrUrl(a) };
+      }
+      case 'x_get_profile_stats': {
+        const profile = await client.getProfile(extractUsername(a));
+        return { success: !!profile, profile };
+      }
+      case 'x_get_tweet_detail': {
+        const tweet = await client.getTweet(extractIdOrUrl(a));
+        return { success: !!tweet, tweet };
+      }
+      case 'x_search_tweets': {
+        const query = a.query || a.q || extractText(a);
+        const count = Math.min(Math.max(Number(a.max) || Number(a.count) || 10, 1), 50);
+        const tweets = [];
+        for await (const t of client.searchTweets(query, count)) {
+          tweets.push(t);
+        }
+        return { success: true, query, count: tweets.length, tweets };
+      }
+      default:
+        return null;
+    }
+  }
+
   async function executeTool(name, args, ctx) {
     let n = name;
     let a = args || {};
@@ -493,6 +633,19 @@
       return runLlmTool(n, a, ctx);
     }
 
+    // ── HTTP-backed tools (no tab required) ──
+    if (HTTP_TOOL_NAMES.has(n) && ctx.getHttpClient) {
+      try {
+        const client = await ctx.getHttpClient();
+        if (client?.isAuthenticated?.()) {
+          const r = await runHttpTool(client, n, a);
+          if (r) return r;
+        }
+      } catch (err) {
+        console.warn(`[XActionsTools] HTTP tool ${n} failed, falling back to page tool:`, err.message || err);
+      }
+    }
+
     // ── Page (all remaining x_* tools) ──
     if (!ctx.pageTool) return { error: 'Open x.com tab for page tools' };
     return ctx.pageTool(n, a);
@@ -526,6 +679,7 @@
     },
     systemPrompt,
     executeTool,
+    runHttpTool,
     AUTOMATION_IDS,
     AUTO_MAP,
   };

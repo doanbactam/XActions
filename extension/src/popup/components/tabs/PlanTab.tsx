@@ -81,8 +81,8 @@ export function PlanTab() {
           </button>
           <p className="xa-hint">
             {agent.backgroundMode
-              ? 'Chạy nền · đóng popup vẫn xong · có thông báo'
-              : 'Cần để popup mở hoặc bật Background Mode trong Settings để chạy nền.'}
+              ? 'Chạy nền · HTTP API trước · đóng popup vẫn xong · có thông báo'
+              : 'Cần để popup mở hoặc bật Background Mode trong Settings để chạy nền qua HTTP API.'}
           </p>
           {agent.strategyError && <div className="xa-error-line">{agent.strategyError}</div>}
         </section>

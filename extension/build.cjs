@@ -15,6 +15,7 @@ const INCLUDE = [
   'README.md',
   'agent/catalog.js',
   'agent/tools.js',
+  'agent/http-client.js',
   'agent/agent-core.js',
   'agent/llm.js',
   'agent/xai-oauth.js',
@@ -82,7 +83,7 @@ function checkManifest(manifest) {
   if (!manifest.background?.service_worker) fail('background.service_worker required');
   if (!manifest.action?.default_popup) fail('action.default_popup required');
   const perms = new Set(manifest.permissions || []);
-  for (const p of ['storage', 'tabs', 'scripting', 'notifications']) {
+  for (const p of ['storage', 'tabs', 'scripting', 'notifications', 'cookies']) {
     if (!perms.has(p)) fail(`Missing permission: ${p}`);
   }
   ok(`Manifest v${manifest.version} OK`);

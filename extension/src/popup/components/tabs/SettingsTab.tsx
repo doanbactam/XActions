@@ -118,7 +118,9 @@ export function SettingsTab({ onGoToPlan }: SettingsTabProps) {
 
       <div className="xa-settings-section">
         <h3>Background Mode</h3>
-        <p className="xa-settings-hint">Khi bật, Agent mở tab x.com ở cửa sổ thu nhỏ / nền thay vì cướp focus. Popup có thể đóng trong lúc chạy.</p>
+        <p className="xa-settings-hint">
+          Khi bật, Agent thử gọi HTTP API nội bộ của X trước (không cần tab mở). Nếu action cần DOM, Agent tự mở tab ở nền / thu nhỏ. Popup có thể đóng trong lúc chạy.
+        </p>
         <label className="xa-checkbox-label">
           <Checkbox.Root
             checked={agent.backgroundMode}
