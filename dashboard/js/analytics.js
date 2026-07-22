@@ -19,6 +19,28 @@ let lastMentionsData = null;
 let compareMode = false;
 
 // ============================================================================
+// API Helpers
+// ============================================================================
+
+function authToken() {
+  return localStorage.getItem('authToken');
+}
+
+function jsonHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = authToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+function authHeaders() {
+  const headers = {};
+  const token = authToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+// ============================================================================
 // Toast Notification System
 // ============================================================================
 
@@ -147,7 +169,7 @@ async function analyzeSentiment() {
     try {
       const res = await fetch(API_BASE + '/sentiment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(),
         body: JSON.stringify({ texts: [textA, textB], mode }),
       });
       const data = await res.json();
@@ -188,7 +210,7 @@ async function analyzeSentiment() {
     if (lines.length > 1) {
       const res = await fetch(API_BASE + '/sentiment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(),
         body: JSON.stringify({ texts: lines, mode }),
       });
       const data = await res.json();
@@ -202,7 +224,7 @@ async function analyzeSentiment() {
     } else {
       const res = await fetch(API_BASE + '/sentiment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(),
         body: JSON.stringify({ text: input, mode }),
       });
       const data = await res.json();
@@ -425,7 +447,7 @@ function exportTimeline(format) {
   } else if (format === 'markdown') {
     const target = document.getElementById('timelineMonitor').selectedOptions[0]?.textContent?.split(' (')[0] || '';
     const period = document.getElementById('timelinePeriod').value;
-    fetch(`${API_BASE}/reports/${encodeURIComponent(target.replace('@', ''))}?period=${period}&format=markdown`)
+    fetch(`${API_BASE}/reports/${encodeURIComponent(target.replace('@', ''))}?period=${period}&format=markdown`, { headers: authHeaders() })
       .then(res => res.text())
       .then(md => {
         downloadFile('reputation-report.md', md, 'text/markdown');
@@ -464,7 +486,7 @@ async function startMonitor() {
   try {
     const res = await fetch(API_BASE + '/monitor', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: jsonHeaders(),
       body: JSON.stringify({
         target,
         type,
@@ -490,7 +512,7 @@ async function startMonitor() {
 
 async function loadMonitors() {
   try {
-    const res = await fetch(API_BASE + '/monitor');
+    const res = await fetch(API_BASE + '/monitor', { headers: authHeaders() });
     const data = await res.json();
     const container = document.getElementById('monitorsContainer');
 
@@ -529,7 +551,7 @@ async function loadMonitors() {
 
 async function deleteMonitor(id) {
   try {
-    await fetch(API_BASE + '/monitor/' + id, { method: 'DELETE' });
+    await fetch(API_BASE + '/monitor/' + id, { method: 'DELETE', headers: authHeaders() });
     loadMonitors();
     refreshMonitorSelect();
     showToast('Monitor removed', '', 'success');
@@ -547,7 +569,7 @@ const stopMonitor = deleteMonitor;
 
 async function refreshMonitorSelect() {
   try {
-    const res = await fetch(API_BASE + '/monitor');
+    const res = await fetch(API_BASE + '/monitor', { headers: authHeaders() });
     const data = await res.json();
     const select = document.getElementById('timelineMonitor');
     const current = select.value;
@@ -570,7 +592,7 @@ async function loadTimeline() {
   if (!monitorId) return;
 
   try {
-    const res = await fetch(`${API_BASE}/monitor/${monitorId}?limit=500`);
+    const res = await fetch(`${API_BASE}/monitor/${monitorId}?limit=500`, { headers: authHeaders() });
     const data = await res.json();
 
     if (!data.history || data.history.length === 0) {
@@ -793,7 +815,7 @@ async function loadAlerts() {
       ? `${API_BASE}/alerts?severity=${severity}&limit=50`
       : `${API_BASE}/alerts?limit=50`;
 
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: authHeaders() });
     const data = await res.json();
     const container = document.getElementById('alertsContainer');
 

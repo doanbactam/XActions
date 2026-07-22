@@ -20,6 +20,8 @@
 /terms /terms.html 200
 /features /features.html 200
 /run /run.html 200
+/scripts /run 301
+/scripts.html /run 301
 /admin /admin.html 200
 /ai /ai.html 200
 /ai-api /ai-api.html 200

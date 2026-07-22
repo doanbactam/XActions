@@ -443,16 +443,104 @@
     render();
   }
 
+  // ── Convert canvas model to backend workflow definition ─
+  function toWorkflowDefinition() {
+    const json = toJSON();
+    const name = json.name || 'Untitled Workflow';
+
+    // Extract trigger from trigger blocks
+    let trigger = { type: 'manual' };
+    const triggerBlocks = blocks.filter(b => b.category === 'trigger');
+    if (triggerBlocks.length > 0) {
+      const tb = triggerBlocks[0];
+      const getValue = (key) => tb.fields.find(f => f.key === key)?.value || '';
+      if (tb.type === 'schedule') trigger = { type: 'schedule', cron: getValue('cron') || '0 * * * *' };
+      else if (tb.type === 'event') trigger = { type: 'event', event: getValue('event') || 'new_tweet' };
+    }
+
+    // Topological sort of action/condition blocks
+    const actionBlocks = blocks.filter(b => b.category !== 'trigger');
+    const inDegree = new Map(actionBlocks.map(b => [b.id, 0]));
+    const adj = new Map(actionBlocks.map(b => [b.id, []]));
+    for (const c of connections) {
+      const fromBlock = blocks.find(b => b.id === c.from);
+      const toBlock = blocks.find(b => b.id === c.to);
+      if (fromBlock && toBlock && fromBlock.category !== 'trigger' && toBlock.category !== 'trigger') {
+        adj.get(c.from).push(c.to);
+        inDegree.set(c.to, (inDegree.get(c.to) || 0) + 1);
+      }
+    }
+
+    const queue = actionBlocks.filter(b => inDegree.get(b.id) === 0).map(b => b.id);
+    const sorted = [];
+    while (queue.length > 0) {
+      const id = queue.shift();
+      const block = actionBlocks.find(b => b.id === id);
+      if (block) sorted.push(block);
+      for (const next of adj.get(id) || []) {
+        inDegree.set(next, inDegree.get(next) - 1);
+        if (inDegree.get(next) === 0) queue.push(next);
+      }
+    }
+
+    // Append any remaining blocks (cycles/disconnected) to avoid data loss
+    for (const b of actionBlocks) {
+      if (!sorted.includes(b)) sorted.push(b);
+    }
+
+    return { name, trigger, steps: sorted.map(b => blockToStep(b)) };
+  }
+
+  function blockToStep(block) {
+    const config = Object.fromEntries(block.fields.map(f => [f.key, f.value]));
+
+    if (block.category === 'condition') {
+      return { condition: config.expression || 'true' };
+    }
+
+    const dataTypeMap = {
+      profile: 'scrapeProfile',
+      followers: 'scrapeFollowers',
+      following: 'scrapeFollowing',
+      tweets: 'scrapeTweets',
+      search: 'searchTweets',
+      hashtag: 'scrapeHashtag',
+      trending: 'scrapeTrending'
+    };
+
+    if (block.type === 'scrape') {
+      const dataType = config.dataType || 'profile';
+      const action = dataTypeMap[dataType] || 'scrapeProfile';
+      if (dataType === 'search') return { action, query: config.target || '' };
+      if (dataType === 'hashtag') return { action, hashtag: config.target || '' };
+      if (dataType === 'trending') return { action };
+      return { action, target: config.target || '' };
+    }
+
+    if (block.type === 'like') {
+      return { action: 'like', url: config.tweetUrl || '' };
+    }
+
+    if (block.type === 'summarize') {
+      return { action: 'summarize', input: config.input || '', provider: config.provider || 'openrouter' };
+    }
+
+    // follow, post, and future actions pass config through directly
+    return { action: block.type, ...config };
+  }
+
   // ── Save / Load / Run ─────────────────────────────────
   async function saveWorkflow() {
+    const def = toWorkflowDefinition();
     const json = toJSON();
     try {
       // Try saving to API first
-      await apiRequest('/workflows', {
+      const data = await apiRequest('/workflows', {
         method: 'POST',
-        body: JSON.stringify(json)
+        body: JSON.stringify(def)
       });
       showToast('Workflow saved to server', 'success');
+      return data;
     } catch {
       // Fallback: save to localStorage
       const saved = JSON.parse(localStorage.getItem('xactions_workflows') || '[]');
@@ -460,6 +548,7 @@
       if (idx >= 0) saved[idx] = json; else saved.push(json);
       localStorage.setItem('xactions_workflows', JSON.stringify(saved));
       showToast('Workflow saved locally', 'success');
+      return null;
     }
   }
 
@@ -490,16 +579,21 @@
   }
 
   async function runWorkflow() {
-    const json = toJSON();
-    if (json.blocks.length === 0) {
+    const def = toWorkflowDefinition();
+    if (def.steps.length === 0) {
       showToast('Add blocks to the workflow first', 'error');
       return;
     }
     try {
-      await apiRequest('/workflows/run', {
+      // Persist the workflow on the server first, then run by ID
+      const saved = await apiRequest('/workflows', {
         method: 'POST',
-        body: JSON.stringify(json)
+        body: JSON.stringify(def)
       });
+      const workflowId = saved?.id || saved?.workflow?.id;
+      if (!workflowId) throw new Error('Could not get workflow ID from server');
+
+      await apiRequest(`/workflows/${workflowId}/run`, { method: 'POST' });
       showToast('Workflow execution started', 'success');
     } catch (err) {
       showToast('Run failed: ' + err.message, 'error');
