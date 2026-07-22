@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Checkbox } from '@base-ui/react/checkbox';
 import type { GlobalSettings } from '../../types';
 import { useToast } from '../ToastProvider';
+import { useAgent } from '../../lib/useAgent';
 
 interface SettingsTabProps {
   onGoToPlan: () => void;
@@ -10,6 +11,7 @@ interface SettingsTabProps {
 
 export function SettingsTab({ onGoToPlan }: SettingsTabProps) {
   const toast = useToast();
+  const agent = useAgent();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [globalSettings, setGlobalSettings] = React.useState<GlobalSettings>({
     minDelay: 2000,
@@ -112,6 +114,57 @@ export function SettingsTab({ onGoToPlan }: SettingsTabProps) {
         <button type="button" className="xa-btn-secondary" onClick={onGoToPlan}>
           Mở tab Plan
         </button>
+      </div>
+
+      <div className="xa-settings-section">
+        <h3>Background Mode</h3>
+        <p className="xa-settings-hint">Khi bật, Agent mở tab x.com ở cửa sổ thu nhỏ / nền thay vì cướp focus. Popup có thể đóng trong lúc chạy.</p>
+        <label className="xa-checkbox-label">
+          <Checkbox.Root
+            checked={agent.backgroundMode}
+            onCheckedChange={(v) => agent.setBackground(!!v)}
+            className="xa-checkbox"
+          >
+            <Checkbox.Indicator className="xa-checkbox-indicator">✓</Checkbox.Indicator>
+          </Checkbox.Root>
+          Chạy Agent ở nền (không treo tab)
+        </label>
+
+        <label className="xa-checkbox-label">
+          <Checkbox.Root
+            checked={!!agent.schedule?.enabled}
+            onCheckedChange={(v) =>
+              agent.setPlaybookSchedule({ enabled: !!v, intervalMinutes: agent.schedule?.intervalMinutes || 60 })
+            }
+            className="xa-checkbox"
+            disabled={!agent.backgroundMode || !agent.playbook}
+          >
+            <Checkbox.Indicator className="xa-checkbox-indicator">✓</Checkbox.Indicator>
+          </Checkbox.Root>
+          Tự động chạy kịch bản định kỳ
+        </label>
+        <label className="xa-field">
+          <span className="xa-field-label">Khoảng cách (phút)</span>
+          <input
+            type="number"
+            className="xa-input"
+            min={15}
+            max={1440}
+            value={agent.schedule?.intervalMinutes || 60}
+            disabled={!agent.backgroundMode || !agent.playbook}
+            onChange={(e) =>
+              agent.setPlaybookSchedule({
+                enabled: !!agent.schedule?.enabled,
+                intervalMinutes: parseInt(e.target.value, 10) || 60,
+              })
+            }
+          />
+        </label>
+        {agent.schedule?.enabled && agent.schedule?.nextRunAt && (
+          <p className="xa-settings-hint">
+            Lần chạy tiếp theo: {new Date(agent.schedule.nextRunAt).toLocaleString()}
+          </p>
+        )}
       </div>
 
       <div className="xa-settings-section">

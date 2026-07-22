@@ -79,7 +79,11 @@ export function PlanTab() {
           >
             {agent.busy ? 'Đang phân tích…' : 'Phân tích tài khoản'}
           </button>
-          <p className="xa-hint">Chạy nền · đóng popup vẫn xong · có thông báo</p>
+          <p className="xa-hint">
+            {agent.backgroundMode
+              ? 'Chạy nền · đóng popup vẫn xong · có thông báo'
+              : 'Cần để popup mở hoặc bật Background Mode trong Settings để chạy nền.'}
+          </p>
           {agent.strategyError && <div className="xa-error-line">{agent.strategyError}</div>}
         </section>
       )}

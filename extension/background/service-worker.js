@@ -19,6 +19,9 @@ const state = {
   totalActions: 0,
   globalPaused: false,
   agentBusy: false,
+  backgroundMode: false,
+  ownedTabIds: new Set(),  // tabs the SW opened itself for background work
+  agentSchedule: null,     // { enabled, intervalMinutes, nextRunAt }
 };
 
 function getState() {
@@ -27,6 +30,8 @@ function getState() {
     totalActions: state.totalActions,
     globalPaused: state.globalPaused,
     agentBusy: state.agentBusy,
+    backgroundMode: state.backgroundMode,
+    agentSchedule: state.agentSchedule,
   };
 }
 
@@ -139,6 +144,18 @@ async function handleMessage(message, sender) {
     case 'AGENT_CLEAR_HISTORY':
       await chrome.storage.local.set({ agentChatHistory: [] });
       return { success: true };
+
+    case 'AGENT_GET_BACKGROUND':
+      return getAgentBackground();
+
+    case 'AGENT_SET_BACKGROUND':
+      return setAgentBackground(!!message.enabled);
+
+    case 'AGENT_SCHEDULE_PLAYBOOK':
+      return setAgentSchedule(message.schedule || {});
+
+    case 'AGENT_EXECUTE_PLAYBOOK_BACKGROUND':
+      return runAgentExecutePlaybook({ ...message, background: true });
 
     case 'AGENT_TEST_LLM':
       return testAgentLlm(message.config);
@@ -352,9 +369,10 @@ async function testAgentLlm(configOverride) {
 }
 
 function buildAgentCtx(cfg, storage) {
+  const background = cfg.background ?? state.backgroundMode;
   return {
     automations: storage.automations || state.activeAutomations,
-    startAutomation: (id, settings) => startAutomation(id, settings),
+    startAutomation: (id, settings) => startAutomation(id, settings, { background }),
     stopAutomation: (id) => stopAutomation(id),
     stopAll: () => stopAll(),
     globalPause: () => globalPause(),
@@ -365,12 +383,13 @@ function buildAgentCtx(cfg, storage) {
     saveSafety: async (safety) => {
       await chrome.storage.local.set({ agentSafety: safety });
     },
-    navigateTab: (url) => navigateXTab(url),
+    navigateTab: (url) => navigateXTab(url, { background }),
     pageTool: (name, args) => runPageTool(name, args),
     toolCatalog: () => globalThis.XActionsCatalog,
     persona: cfg.persona,
     safety: cfg.safety,
     llmConfig: cfg.llm,
+    background,
   };
 }
 
@@ -458,6 +477,9 @@ async function runAgentStrategy(message) {
 
   state.agentBusy = true;
   try {
+    // Ensure a tab is ready for scraping in background or foreground mode
+    await ensureXTab({ background: state.backgroundMode });
+
     const cfg = await getAgentConfig();
     const llmConfig = normalizeLlmConfig(cfg);
     cfg.llm = llmConfig;
@@ -568,6 +590,95 @@ async function notifyUser(title, message) {
   }
 }
 
+async function getAgentBackground() {
+  return {
+    success: true,
+    backgroundMode: state.backgroundMode,
+    schedule: state.agentSchedule,
+  };
+}
+
+async function setAgentBackground(enabled) {
+  state.backgroundMode = enabled;
+  await chrome.storage.local.set({ agentBackgroundMode: enabled });
+  return { success: true, backgroundMode: enabled };
+}
+
+async function setAgentSchedule(schedule) {
+  const next = {
+    enabled: !!schedule.enabled,
+    intervalMinutes: Math.max(15, Math.min(1440, Number(schedule.intervalMinutes) || 60)),
+    nextRunAt: null,
+  };
+  state.agentSchedule = next;
+  await chrome.storage.local.set({ agentSchedule: next });
+
+  await chrome.alarms.clear('xactions-scheduled-playbook');
+  if (next.enabled) {
+    await chrome.alarms.create('xactions-scheduled-playbook', {
+      periodInMinutes: next.intervalMinutes,
+    });
+    next.nextRunAt = Date.now() + next.intervalMinutes * 60 * 1000;
+    await chrome.storage.local.set({ agentSchedule: next });
+  }
+
+  return { success: true, schedule: next };
+}
+
+async function restoreScheduleAlarm() {
+  if (!state.agentSchedule?.enabled) return;
+  const minutes = state.agentSchedule.intervalMinutes || 60;
+  await chrome.alarms.clear('xactions-scheduled-playbook');
+  await chrome.alarms.create('xactions-scheduled-playbook', {
+    periodInMinutes: minutes,
+  });
+}
+
+async function runScheduledPlaybook() {
+  if (state.agentBusy) {
+    console.log('⏸ Scheduled playbook skipped — agent already busy');
+    return;
+  }
+
+  const data = await chrome.storage.local.get(['agentPlaybook', 'agentBackgroundMode']);
+  if (!data.agentPlaybook?.playbook?.steps?.length) {
+    console.log('⏸ Scheduled playbook skipped — no playbook');
+    return;
+  }
+  if (data.agentBackgroundMode === false) {
+    console.log('⏸ Scheduled playbook skipped — background mode disabled');
+    return;
+  }
+
+  await logActivity({
+    time: Date.now(),
+    type: 'start',
+    automation: 'aiAgent',
+    message: '⏰ Scheduled playbook run started',
+  });
+
+  const result = await runAgentExecutePlaybook({
+    playbook: data.agentPlaybook,
+    force: false,
+    background: true,
+  });
+
+  await logActivity({
+    time: Date.now(),
+    type: result?.ok ? 'complete' : 'error',
+    automation: 'aiAgent',
+    message: result?.ok
+      ? `⏰ Scheduled playbook finished: ${result.summary || 'done'}`
+      : `⏰ Scheduled playbook failed: ${result?.error || 'unknown'}`,
+  });
+
+  if (result?.ok) {
+    await notifyUser('XActions · Kịch bản định kỳ đã chạy', result.summary || 'done');
+  } else {
+    await notifyUser('XActions · Kịch bản định kỳ lỗi', result?.error || 'failed');
+  }
+}
+
 async function runAgentExecutePlaybook(message) {
   if (state.agentBusy) {
     return { ok: false, error: 'Agent đang bận.' };
@@ -577,11 +688,13 @@ async function runAgentExecutePlaybook(message) {
   }
 
   state.agentBusy = true;
+  const background = message.background ?? state.backgroundMode;
   try {
     const cfg = await getAgentConfig();
     cfg.llm = normalizeLlmConfig(cfg);
     const storage = await chrome.storage.local.get(['automations']);
     const ctx = buildAgentCtx(cfg, storage);
+    ctx.background = background;
 
     const result = await globalThis.XActionsStrategist.executePlaybook({
       playbook: message.playbook || null,
@@ -650,6 +763,13 @@ async function runAgentExecutePlaybook(message) {
     return { ok: false, error: err.message || String(err) };
   } finally {
     state.agentBusy = false;
+    if (background) {
+      // Close owned background tabs after a grace period so any async
+      // content-script automations can finish. The next run will reopen.
+      try {
+        await chrome.alarms.create('xactions-close-owned-tabs', { when: Date.now() + 60000 });
+      } catch { /* ignore */ }
+    }
   }
 }
 
@@ -696,11 +816,12 @@ function toXUrl(pathOrUrl) {
 }
 
 /** SW-side navigation — survives full page load (page tools would die on location.href) */
-async function navigateXTab(pathOrUrl) {
+async function navigateXTab(pathOrUrl, opts = {}) {
   const url = toXUrl(pathOrUrl);
   if (!url) return { error: 'Invalid x.com url', pathOrUrl };
 
-  let tab = await ensureXTab();
+  const background = opts.background ?? state.backgroundMode;
+  let tab = await ensureXTab({ background });
   if (!tab?.id) return { error: 'Cannot open x.com tab' };
 
   const current = tab.url || '';
@@ -709,7 +830,7 @@ async function navigateXTab(pathOrUrl) {
     current.split('?')[0].replace(/\/$/, '') === url.split('?')[0].replace(/\/$/, '');
 
   if (!same) {
-    await chrome.tabs.update(tab.id, { url, active: true });
+    await chrome.tabs.update(tab.id, { url, active: !background });
     // Wait for content script after navigation
     for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 400));
@@ -721,6 +842,7 @@ async function navigateXTab(pathOrUrl) {
           navigated: true,
           url: updated.url,
           method: 'tabs.update',
+          background,
         };
       } catch {
         /* keep waiting */
@@ -731,11 +853,12 @@ async function navigateXTab(pathOrUrl) {
       success: true,
       navigated: true,
       url: updated?.url || url,
+      background,
       warning: 'Tab navigated but content script not ready yet — wait or retry',
     };
   }
 
-  return { success: true, navigated: false, url: current, method: 'already_there' };
+  return { success: true, navigated: false, url: current, method: 'already_there', background };
 }
 
 /** Tools that must navigate in SW (hard nav) so injected script is not killed */
@@ -770,7 +893,7 @@ async function runPageTool(tool, args) {
 
   // ── SW-owned navigation ────────────────────────────────
   if (tool === 'x_refresh_page') {
-    const tab = await ensureXTab();
+    const tab = await ensureXTab({ background: state.backgroundMode });
     if (!tab?.id) return { error: 'No x.com tab' };
     await chrome.tabs.reload(tab.id);
     for (let i = 0; i < 25; i++) {
@@ -792,7 +915,7 @@ async function runPageTool(tool, args) {
       if (!path) {
         return { error: `Missing args for ${tool}` };
       }
-      return navigateXTab(path);
+      return navigateXTab(path, { background: state.backgroundMode });
     }
   }
 
@@ -800,7 +923,7 @@ async function runPageTool(tool, args) {
   return new Promise(async (resolve) => {
     let tab = null;
     try {
-      tab = await ensureXTab();
+      tab = await ensureXTab({ background: state.backgroundMode });
     } catch {
       resolve({ error: 'Cannot ensure x.com tab' });
       return;
@@ -882,21 +1005,57 @@ async function runPageTool(tool, args) {
 // ============================================
 // AUTOMATION LIFECYCLE
 // ============================================
-async function ensureXTab() {
-  // Prefer active x.com tab in current window
-  try {
-    const active = await chrome.tabs.query({ active: true, currentWindow: true });
-    const t = active[0];
-    if (t?.id && t.url && (t.url.includes('x.com') || t.url.includes('twitter.com'))) {
-      return t;
-    }
-  } catch { /* ignore */ }
+async function ensureXTab(opts = {}) {
+  const background = opts.background ?? state.backgroundMode;
 
+  if (!background) {
+    // Foreground mode: prefer active x.com tab in current window
+    try {
+      const active = await chrome.tabs.query({ active: true, currentWindow: true });
+      const t = active[0];
+      if (t?.id && t.url && (t.url.includes('x.com') || t.url.includes('twitter.com'))) {
+        return t;
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Background mode: reuse any existing x.com tab (don't steal focus)
   const tabs = await getXTabs();
   if (tabs[0]) return tabs[0];
 
-  // Open x.com for the agent to run on
-  const tab = await chrome.tabs.create({ url: 'https://x.com/home', active: true });
+  if (background) {
+    // Try to open in a minimized background window so it does not disturb the user
+    try {
+      const win = await chrome.windows.create({
+        url: 'https://x.com/home',
+        type: 'normal',
+        state: 'minimized',
+      });
+      const tab = win.tabs?.[0];
+      if (tab?.id) {
+        state.ownedTabIds.add(tab.id);
+        await persistOwnedTabs();
+      }
+      // Wait briefly for content script
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        try {
+          await chrome.tabs.sendMessage(tab.id, { type: 'PING' });
+          return tab;
+        } catch {
+          /* not ready */
+        }
+      }
+      return tab;
+    } catch { /* fall back to inactive tab */ }
+  }
+
+  // Open x.com for the agent to run on (inactive when background, active otherwise)
+  const tab = await chrome.tabs.create({ url: 'https://x.com/home', active: !background });
+  if (tab?.id && background) {
+    state.ownedTabIds.add(tab.id);
+    await persistOwnedTabs();
+  }
   // Wait briefly for content script
   for (let i = 0; i < 20; i++) {
     await new Promise((r) => setTimeout(r, 500));
@@ -910,7 +1069,26 @@ async function ensureXTab() {
   return tab;
 }
 
-async function startAutomation(automationId, settings) {
+async function persistOwnedTabs() {
+  try {
+    await chrome.storage.local.set({ ownedTabIds: Array.from(state.ownedTabIds) });
+  } catch { /* ignore */ }
+}
+
+async function closeOwnedBackgroundTabs(excludeTabId) {
+  if (!state.backgroundMode) return;
+  const ids = Array.from(state.ownedTabIds).filter((id) => id && id !== excludeTabId);
+  state.ownedTabIds.clear();
+  await persistOwnedTabs();
+  for (const id of ids) {
+    try {
+      await chrome.tabs.remove(id);
+    } catch { /* tab may already be closed */ }
+  }
+}
+
+async function startAutomation(automationId, settings, opts = {}) {
+  const background = opts.background ?? state.backgroundMode;
   state.activeAutomations[automationId] = {
     running: true,
     actionCount: 0,
@@ -928,7 +1106,7 @@ async function startAutomation(automationId, settings) {
 
   let delivered = false;
   let lastError = null;
-  const tab = await ensureXTab();
+  const tab = await ensureXTab({ background });
   const targets = tab ? [tab] : await getXTabs();
 
   for (const t of targets) {
@@ -1136,6 +1314,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         console.log(`Tab ${tab.id} not responding`);
       }
     }
+  } else if (alarm.name === 'xactions-scheduled-playbook') {
+    await runScheduledPlaybook();
+  } else if (alarm.name === 'xactions-close-owned-tabs') {
+    await closeOwnedBackgroundTabs();
   }
 });
 
@@ -1221,10 +1403,25 @@ async function getXTabs() {
   return tabs;
 }
 
-// Restore state on service worker restart
-chrome.storage.local.get(['automations', 'totalActions', 'globalPaused']).then(data => {
+async function loadPersistentState() {
+  const data = await chrome.storage.local.get([
+    'automations',
+    'totalActions',
+    'globalPaused',
+    'agentBackgroundMode',
+    'agentSchedule',
+    'ownedTabIds',
+  ]);
   if (data.automations) state.activeAutomations = data.automations;
   if (data.totalActions) state.totalActions = data.totalActions;
   if (data.globalPaused) state.globalPaused = data.globalPaused;
+  if (typeof data.agentBackgroundMode === 'boolean') state.backgroundMode = data.agentBackgroundMode;
+  if (data.agentSchedule) state.agentSchedule = data.agentSchedule;
+  if (Array.isArray(data.ownedTabIds)) {
+    state.ownedTabIds = new Set(data.ownedTabIds);
+  }
   updateBadge();
-});
+  await restoreScheduleAlarm();
+}
+
+loadPersistentState();
