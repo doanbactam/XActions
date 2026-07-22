@@ -32,6 +32,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 // ============================================================================
@@ -4093,7 +4094,17 @@ async function main() {
 
 // Only start the server when this module is the entry point.
 // This lets tests import TOOLS without launching the stdio transport.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry || entry === '-' || entry.startsWith('[')) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
   main().catch((error) => {
     console.error('❌ Fatal error:', error.message);
     if (process.env.DEBUG) {
