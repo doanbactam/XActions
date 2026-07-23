@@ -711,6 +711,19 @@
         Object.keys(automationRunners).forEach(k => automationStopFlags[k] = true);
         break;
 
+      case 'EXTENSION_RELOADED':
+        // Bridge died after extension reload — stop runners, avoid zombie loops
+        Object.keys(automationStopFlags).forEach((k) => {
+          automationStopFlags[k] = true;
+        });
+        Object.keys(automationRunners).forEach((k) => {
+          automationStopFlags[k] = true;
+        });
+        console.info(
+          '🔌 XActions page script: extension reloaded — refresh tab to reconnect.',
+        );
+        break;
+
       case 'RESUME_ALL':
         // Resuming would need re-running, handled by popup
         break;

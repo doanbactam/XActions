@@ -109,10 +109,10 @@ export function SettingsTab({ onGoToPlan }: SettingsTabProps) {
       <div className="xa-settings-section">
         <h3>AI Agent</h3>
         <p className="xa-settings-hint">
-          Tab <strong>Plan</strong> = Strategist (phân tích → kịch bản). Key/OAuth lưu <code>chrome.storage.local</code> trên máy này.
+          Tab <strong>Kịch bản</strong> = Strategist (phân tích → chạy). Key/OAuth lưu local trên máy này.
         </p>
         <button type="button" className="xa-btn-secondary" onClick={onGoToPlan}>
-          Mở tab Plan
+          Mở tab Kịch bản
         </button>
       </div>
 

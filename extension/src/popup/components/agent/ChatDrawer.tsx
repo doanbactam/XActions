@@ -3,14 +3,8 @@ import * as React from 'react';
 import { Collapsible } from '@base-ui/react/collapsible';
 import type { UseAgentReturn } from '../../lib/useAgent';
 
-const SUGGESTIONS = [
-  { label: 'Phân tích lại', action: 'strategy' },
-  { label: 'Hỏi kịch bản', prompt: 'Tóm tắt kịch bản và đề xuất risk conservative.' },
-  { label: 'Stop all', prompt: 'Dừng tất cả automation (x_stop_all).' },
-];
-
 export function ChatDrawer({ agent }: { agent: UseAgentReturn }) {
-  const { history, busy, sendChat, runStrategy } = agent;
+  const { history, busy, sendChat } = agent;
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
 
@@ -21,29 +15,20 @@ export function ChatDrawer({ agent }: { agent: UseAgentReturn }) {
     setInput('');
   };
 
+  const unreadHint = !open && history.length > 0 ? history.length : 0;
+
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen} className="xa-chat-drawer">
       <Collapsible.Trigger className="xa-chat-drawer-trigger">
-        <span>Chat phụ</span>
-        <span className="xa-chat-drawer-sub">Chỉnh kịch bản · hỏi thêm</span>
+        <span>Chat</span>
+        {unreadHint > 0 && <span className="xa-chat-count">{unreadHint}</span>}
+        <span className="xa-chat-drawer-sub">{open ? 'Thu gọn' : 'Hỏi thêm · chỉnh kịch bản'}</span>
       </Collapsible.Trigger>
       <Collapsible.Panel className="xa-chat-drawer-body">
         <div className="xa-chat">
           {history.length === 0 ? (
             <div className="xa-chat-empty">
-              <p>Dùng chat sau khi đã có kịch bản — hoặc lệnh nhanh bên dưới.</p>
-              <div className="xa-chat-suggestions">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s.label}
-                    type="button"
-                    className="xa-chip"
-                    onClick={() => (s.action === 'strategy' ? runStrategy() : submit(s.prompt))}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+              <p>Hỏi Grok sau khi có kịch bản. Ví dụ: “giảm risk” hoặc “tóm tắt bước”.</p>
             </div>
           ) : (
             history.map((m, i) => (

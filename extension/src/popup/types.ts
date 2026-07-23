@@ -36,7 +36,15 @@ export interface AccountInfo {
 
 // ---- Agent / Strategist ----
 
-export type PlaybookStepStatus = 'pending' | 'done' | 'failed' | 'skipped_confirm' | 'blocked';
+export type PlaybookStepStatus =
+  | 'pending'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'skipped_confirm'
+  | 'blocked';
+
+export type StepRisk = 'low' | 'medium' | 'high' | 'critical';
 
 export interface PlaybookStep {
   id: string;
@@ -49,6 +57,8 @@ export interface PlaybookStep {
   enabled?: boolean;
   status?: PlaybookStepStatus;
   lastResult?: unknown;
+  risk?: StepRisk | string;
+  safetyNotes?: string[];
 }
 
 export interface PlaybookData {
@@ -63,6 +73,33 @@ export interface PlaybookData {
   rejectedSteps?: unknown[];
 }
 
+export interface SafetyAnalysis {
+  overallRisk?: 'low' | 'medium' | 'high' | string;
+  score?: number;
+  riskLevel?: 'conservative' | 'moderate' | 'aggressive' | string;
+  accountFactors?: string[];
+  actionRisks?: { tool: string; risk: string; why: string }[];
+  recommendedCaps?: {
+    likes?: number;
+    follows?: number;
+    unfollows?: number;
+    replies?: number;
+    maxActionsPerTurn?: number;
+  };
+  guardrails?: string[];
+  disabledTools?: string[];
+  summaryVi?: string;
+  analyzedAt?: number;
+  source?: string;
+  accountStats?: {
+    followers?: number | null;
+    following?: number | null;
+    sampleTweets?: number;
+    gatherErrors?: number;
+  };
+  pressure?: number;
+}
+
 export interface AgentPlaybookEnvelope {
   version?: number;
   createdAt?: number;
@@ -74,6 +111,7 @@ export interface AgentPlaybookEnvelope {
   model?: string;
   briefMarkdown?: string;
   lastRunAt?: number;
+  safetyAnalysis?: SafetyAnalysis | null;
 }
 
 export type AgentStage = 'setup' | 'analyze' | 'playbook' | 'run';

@@ -15,40 +15,55 @@ export function PlanTab() {
 
   const needsLogin = !agent.oauth.signedIn && !agent.oauthDevice;
   const hasPlaybook = !!agent.playbook;
-  const showPipeline = agent.stage !== 'setup' || agent.busy;
+  // Only show pipeline while analyzing / mid-flow — hide once playbook is ready
+  const showPipeline = agent.busy || (agent.stage === 'analyze' && !hasPlaybook);
 
   return (
     <section className="xa-tab-content xa-plan">
-      {showPipeline && <PipelineSteps stage={agent.stage} />}
-
-      <div className="xa-plan-status-strip">
-        <div className="xa-plan-status-main">
-          <span className="xa-plan-status-label">Strategist</span>
-          <span className="xa-plan-status-line">{agent.statusLine}</span>
+      <div className="xa-plan-toolbar">
+        <div className="xa-plan-toolbar-text">
+          {agent.busy ? (
+            <span className="xa-plan-busy">{agent.statusLine || 'Đang xử lý…'}</span>
+          ) : hasPlaybook ? (
+            <span className="xa-plan-ready">
+              @{agent.playbook?.account?.handle || '…'} · sẵn sàng chạy
+            </span>
+          ) : agent.oauth.signedIn ? (
+            <span className="xa-plan-ready">Grok sẵn sàng · phân tích tài khoản</span>
+          ) : (
+            <span className="xa-plan-muted">Cần đăng nhập Grok</span>
+          )}
         </div>
-        <div className="xa-plan-status-actions">
-          <button type="button" className="xa-btn-quiet" title="Grok & persona" onClick={() => setConfigOpen((v) => !v)}>
-            ⚙
-          </button>
-        </div>
+        <button
+          type="button"
+          className={`xa-icon-btn xa-icon-btn-sm ${configOpen ? 'is-active' : ''}`}
+          title="Cấu hình Grok"
+          aria-label="Cấu hình Grok"
+          aria-expanded={configOpen}
+          onClick={() => setConfigOpen((v) => !v)}
+        >
+          ⚙
+        </button>
       </div>
 
+      {agent.busy && (
+        <div className="xa-busy-track" aria-hidden="true">
+          <div className="xa-busy-bar" />
+        </div>
+      )}
+
       <Collapsible.Root open={configOpen} onOpenChange={setConfigOpen}>
-        <Collapsible.Panel>
+        <Collapsible.Panel className="xa-plan-config-panel">
           <ConfigPanel agent={agent} />
         </Collapsible.Panel>
       </Collapsible.Root>
 
-      {/* Guided flow — chỉ hiện 1 section theo state */}
+      {showPipeline && <PipelineSteps stage={agent.stage} />}
+
       {needsLogin && !hasPlaybook && (
         <section className="xa-guide">
-          <div className="xa-guide-step">
-            <span className="xa-guide-num">1</span>
-            <div className="xa-guide-body">
-              <h2 className="xa-h2">Đăng nhập Grok</h2>
-              <p className="xa-lead">Kết nối xAI (SuperGrok / Premium+) để AI phân tích tài khoản và lên kịch bản.</p>
-            </div>
-          </div>
+          <h2 className="xa-h2">Đăng nhập Grok</h2>
+          <p className="xa-lead">Kết nối xAI để AI phân tích và lập kịch bản an toàn.</p>
           <button type="button" className="xa-btn-primary xa-btn-block xa-cta" onClick={agent.startOauth}>
             Đăng nhập xAI
           </button>
@@ -60,29 +75,22 @@ export function PlanTab() {
 
       {!needsLogin && !hasPlaybook && (
         <section className="xa-guide">
-          <div className="xa-guide-step">
-            <span className="xa-guide-num">✓</span>
-            <div className="xa-guide-body">
-              <h2 className="xa-h2">Grok đã sẵn sàng</h2>
-              <p className="xa-lead">
-                {agent.oauth.signedIn
-                  ? 'AI sẽ đọc profile, feed, phong cách trên tab x.com — rồi lập kịch bản chạy an toàn.'
-                  : 'Hoàn tất đăng nhập để bắt đầu phân tích.'}
-              </p>
-            </div>
-          </div>
+          <h2 className="xa-h2">Phân tích tài khoản</h2>
+          <p className="xa-lead">
+            Đọc profile + feed trên tab x.com, rồi tạo kịch bản có kiểm soát safety.
+          </p>
           <button
             type="button"
             className="xa-btn-primary xa-btn-block xa-cta"
             disabled={agent.busy || !agent.oauth.signedIn}
             onClick={agent.runStrategy}
           >
-            {agent.busy ? 'Đang phân tích…' : 'Phân tích tài khoản'}
+            {agent.busy ? 'Đang phân tích…' : 'Bắt đầu phân tích'}
           </button>
           <p className="xa-hint">
             {agent.backgroundMode
-              ? 'Chạy nền · HTTP API trước · đóng popup vẫn xong · có thông báo'
-              : 'Cần để popup mở hoặc bật Background Mode trong Settings để chạy nền qua HTTP API.'}
+              ? 'Chạy nền — đóng popup vẫn xong.'
+              : 'Bật Background Mode trong Cài đặt để chạy nền.'}
           </p>
           {agent.strategyError && <div className="xa-error-line">{agent.strategyError}</div>}
         </section>
@@ -90,7 +98,6 @@ export function PlanTab() {
 
       {hasPlaybook && <PlaybookCard agent={agent} />}
 
-      {/* Chỉ hiện chat drawer khi đã có playbook hoặc đã có history */}
       {(hasPlaybook || agent.history.length > 0) && <ChatDrawer agent={agent} />}
     </section>
   );

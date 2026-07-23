@@ -1,14 +1,18 @@
 // by nichxbt
+import type { AccountInfo } from '../types';
 
 interface HeaderProps {
   connected: boolean;
-  headerSub: string;
+  account: AccountInfo | null;
   paused: boolean;
   onTogglePause: () => void;
   onEmergencyStop: () => void;
 }
 
-export function Header({ connected, headerSub, paused, onTogglePause, onEmergencyStop }: HeaderProps) {
+export function Header({ connected, account, paused, onTogglePause, onEmergencyStop }: HeaderProps) {
+  const handle = account?.handle ? `@${account.handle}` : null;
+  const statusLabel = !connected ? 'Offline · mở x.com' : handle || 'Live';
+
   return (
     <header className="xa-header">
       <div className="xa-header-left">
@@ -17,18 +21,17 @@ export function Header({ connected, headerSub, paused, onTogglePause, onEmergenc
         </div>
         <div className="xa-header-brand">
           <div className="xa-header-title">XActions</div>
-          <div className="xa-header-sub">{headerSub}</div>
+          <div className={`xa-header-sub ${connected ? 'is-live' : 'is-off'}`}>
+            <span className="xa-status-dot" aria-hidden="true" />
+            {statusLabel}
+          </div>
         </div>
       </div>
       <div className="xa-header-right">
-        <div className={`xa-status-pill ${connected ? 'is-connected' : 'is-disconnected'}`} title={connected ? 'Connected to X' : 'Not on X — open x.com'}>
-          <span className="xa-status-dot" />
-          <span>{connected ? 'Live' : 'Offline'}</span>
-        </div>
         <button
           type="button"
           className="xa-icon-btn"
-          title="Mở dashboard (tab mới)"
+          title="Dashboard"
           aria-label="Dashboard"
           onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('dashboard/dashboard.html') })}
         >

@@ -2,7 +2,6 @@
 import * as React from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { Header } from './components/Header';
-import { AccountCard } from './components/AccountCard';
 import { DisconnectedBanner, RateLimitBanner } from './components/Banners';
 import { OnboardingDialog } from './components/OnboardingDialog';
 import { PlanTab } from './components/tabs/PlanTab';
@@ -14,9 +13,9 @@ import { useToast } from './components/ToastProvider';
 import type { AccountInfo } from './types';
 
 const TABS = [
-  { id: 'agent', icon: '◈', label: 'Plan' },
-  { id: 'activity', icon: '☰', label: 'Log' },
-  { id: 'settings', icon: '⚙', label: 'Cài đặt' },
+  { id: 'agent', label: 'Kịch bản' },
+  { id: 'activity', label: 'Log' },
+  { id: 'settings', label: 'Cài đặt' },
 ] as const;
 
 export function App() {
@@ -33,7 +32,9 @@ export function App() {
       try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         const activeTab = tabs[0];
-        const isXTab = !!activeTab?.url && (activeTab.url.includes('x.com') || activeTab.url.includes('twitter.com'));
+        const isXTab =
+          !!activeTab?.url &&
+          (activeTab.url.includes('x.com') || activeTab.url.includes('twitter.com'));
         setConnected(isXTab);
         if (isXTab && activeTab.id) {
           try {
@@ -52,14 +53,32 @@ export function App() {
         setAccount(message.data);
       }
     };
-    chrome.runtime.onMessage.addListener(listener);
+    try {
+      if (chrome?.runtime?.id) {
+        chrome.runtime.onMessage.addListener(listener);
+      }
+    } catch {
+      /* extension reloading */
+    }
 
-    chrome.storage.local.get(['firstRun', 'rateLimited']).then((data) => {
-      if (data.firstRun) setOnboardingOpen(true);
-      if (data.rateLimited) setRateLimited(true);
-    });
+    try {
+      chrome.storage.local.get(['firstRun', 'rateLimited']).then((data) => {
+        if (data.firstRun) setOnboardingOpen(true);
+        if (data.rateLimited) setRateLimited(true);
+      }).catch(() => { /* context invalidated */ });
+    } catch {
+      /* ignore */
+    }
 
-    return () => chrome.runtime.onMessage.removeListener(listener);
+    return () => {
+      try {
+        if (chrome?.runtime?.id) {
+          chrome.runtime.onMessage.removeListener(listener);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
   }, []);
 
   React.useEffect(() => {
@@ -82,7 +101,12 @@ export function App() {
     const res = await sendMessage<{ success: boolean }>({ type: 'STOP_ALL' });
     if (res?.success) {
       Object.keys(state.automations).forEach((id) => state.patchAutomation(id, { running: false }));
-      state.pushLocalLog({ time: Date.now(), type: 'stop', automation: 'all', message: 'Emergency stop — all automations halted' });
+      state.pushLocalLog({
+        time: Date.now(),
+        type: 'stop',
+        automation: 'all',
+        message: 'Emergency stop — all automations halted',
+      });
       toast.show('All automations stopped', 'warning');
     }
   };
@@ -119,20 +143,18 @@ export function App() {
     <div className="xa-app">
       <Header
         connected={connected}
-        headerSub="Plan · tab x.com đã login"
+        account={account}
         paused={state.globalPaused}
         onTogglePause={handleTogglePause}
         onEmergencyStop={handleEmergencyStop}
       />
 
       <DisconnectedBanner visible={!connected} />
-      <AccountCard connected={connected} account={account} />
 
       <Tabs.Root value={tab} onValueChange={(v) => setTab(v as string)} className="xa-tabs-root">
         <Tabs.List className="xa-tabs-nav">
           {TABS.map((t) => (
             <Tabs.Tab key={t.id} value={t.id} className="xa-tab">
-              <span className="xa-tab-icon">{t.icon}</span>
               <span className="xa-tab-text">{t.label}</span>
             </Tabs.Tab>
           ))}

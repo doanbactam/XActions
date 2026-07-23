@@ -52,7 +52,17 @@ export function PlaybookSection({ agent }: { agent: UseAgentReturn }) {
               {failedCount > 0 && <span style={{ color: 'var(--xa-danger)' }}>❌ {failedCount} lỗi</span>}
               <span>☑ {enabledCount} bật</span>
               {playbook.playbook.riskLevel && <span>🛡 {playbook.playbook.riskLevel}</span>}
+              {playbook.safetyAnalysis?.overallRisk && (
+                <span title={playbook.safetyAnalysis.summaryVi || ''}>
+                  ⚖ safety {playbook.safetyAnalysis.overallRisk} ({playbook.safetyAnalysis.score ?? '—'}/10)
+                </span>
+              )}
             </div>
+            {playbook.safetyAnalysis?.summaryVi && (
+              <p style={{ fontSize: 12, color: 'var(--xa-ink-2)', marginTop: 8, maxWidth: 560 }}>
+                {playbook.safetyAnalysis.summaryVi}
+              </p>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="xa-dash-btn xa-dash-btn-primary" disabled={busy} onClick={() => runPlaybook(false)}>

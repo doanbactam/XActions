@@ -121,7 +121,8 @@ function checkCatalogWiring() {
   const n = ctx.XActionsCatalog?.count || 0;
   if (n < 100) fail(`Expected ≥100 tools, got ${n}`);
   if (!ctx.XActionsStrategist?.runStrategyPipeline) fail('Strategist not loaded');
-  if (!ctx.XActionsStrategist?.PLAYBOOK_ALLOWLIST?.size) fail('Allowlist empty');
+  const allowN = ctx.XActionsStrategist?.PLAYBOOK_ALLOWLIST?.size || 0;
+  if (allowN < 80) fail(`PLAYBOOK_ALLOWLIST too small (${allowN}); expected ≥80 growth/read/LLM tools`);
 
   const inj = fs.readFileSync(path.join(ROOT, 'content/injected.js'), 'utf8');
   const page = ctx.XActionsCatalog.TOOLS.filter((t) => t.kind === 'page').map((t) => t.name);
@@ -196,18 +197,38 @@ function writeBuildInfo(manifest, zipPath) {
 }
 
 function buildPopup() {
-  const tsc = spawnSync('npx', ['tsc', '--noEmit', '-p', 'tsconfig.json'], { cwd: ROOT, encoding: 'utf8' });
-  if (tsc.status !== 0) fail(`Popup type-check failed:\n${tsc.stdout || tsc.stderr}`);
+  // Prefer local typescript binary via node (reliable on Windows; avoids wrong npx "tsc" package)
+  const tscJs = path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc');
+  if (!fs.existsSync(tscJs)) {
+    fail('typescript not installed in extension/ — run: npm install --prefix extension');
+  }
+  const tsc = spawnSync(process.execPath, [tscJs, '--noEmit', '-p', 'tsconfig.json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  if (tsc.status !== 0) {
+    fail(`Popup type-check failed:\n${tsc.stdout || tsc.stderr || tsc.error?.message || 'unknown error'}`);
+  }
   ok('Popup type-check passed');
 
-  const esb = spawnSync('node', ['scripts/build-popup.mjs'], { cwd: ROOT, encoding: 'utf8' });
-  if (esb.status !== 0) fail(`Popup bundle build failed:\n${esb.stdout || esb.stderr}`);
+  const esb = spawnSync(process.execPath, ['scripts/build-popup.mjs'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  if (esb.status !== 0) {
+    fail(`Popup bundle build failed:\n${esb.stdout || esb.stderr || esb.error?.message || 'unknown error'}`);
+  }
   ok('Popup bundle built (React + TypeScript + Base UI)');
 }
 
 function buildHttpClient() {
-  const esb = spawnSync('node', ['scripts/build-http-client.mjs'], { cwd: ROOT, encoding: 'utf8' });
-  if (esb.status !== 0) fail(`HTTP client bundle build failed:\n${esb.stdout || esb.stderr}`);
+  const esb = spawnSync(process.execPath, ['scripts/build-http-client.mjs'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  if (esb.status !== 0) {
+    fail(`HTTP client bundle build failed:\n${esb.stdout || esb.stderr || esb.error?.message || 'unknown error'}`);
+  }
   ok('HTTP client bundle built');
 }
 

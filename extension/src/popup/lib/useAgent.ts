@@ -187,11 +187,50 @@ export function useAgent() {
     return res;
   }, []);
 
+  /** Live status + playbook step updates while SW works (smoother UI). */
+  const startProgressPoll = React.useCallback(() => {
+    const tick = async () => {
+      try {
+        if (!chrome?.runtime?.id) {
+          setStatusLine('Extension đã reload — mở lại popup');
+          return;
+        }
+        const data = await chrome.storage.local.get([
+          'agentStrategyProgress',
+          'agentPlaybook',
+        ]);
+        const p = data.agentStrategyProgress as
+          | { phase?: string; label?: string; tool?: string; id?: string }
+          | undefined;
+        if (p?.label) {
+          setStatusLine(p.label);
+        } else if (p?.tool) {
+          setStatusLine(`${p.tool}${p.id ? ` · ${p.id}` : ''}`);
+        }
+        if (p?.phase === 'analyze' || p?.phase === 'gather' || p?.phase === 'synthesize') {
+          setStage('analyze');
+        } else if (p?.phase === 'execute') {
+          setStage('run');
+        } else if (p?.phase === 'done' || p?.phase === 'playbook') {
+          setStage('playbook');
+        }
+        if (data.agentPlaybook) {
+          setPlaybook(data.agentPlaybook as AgentPlaybookEnvelope);
+        }
+      } catch {
+        /* context invalidated / storage race — ignore */
+      }
+    };
+    void tick();
+    return window.setInterval(tick, 450);
+  }, []);
+
   const runStrategy = React.useCallback(async () => {
     setBusy(true);
     setStrategyError(null);
     setStage('analyze');
     setStatusLine('Grok đang phân tích tài khoản…');
+    const pollId = startProgressPoll();
     try {
       const res = await sendMessage<{ ok: boolean; playbook?: AgentPlaybookEnvelope; error?: string }>({
         type: 'AGENT_RUN_STRATEGY',
@@ -205,14 +244,16 @@ export function useAgent() {
         setStatusLine('Phân tích lỗi — thử lại');
       }
     } finally {
+      window.clearInterval(pollId);
       setBusy(false);
     }
-  }, []);
+  }, [startProgressPoll]);
 
   const runPlaybook = React.useCallback(async (force: boolean) => {
     setBusy(true);
     setStage('run');
     setStatusLine(force ? 'Đang chạy kịch bản (force)…' : 'Đang chạy kịch bản…');
+    const pollId = startProgressPoll();
     try {
       const res = await sendMessage<{ ok: boolean; playbook?: AgentPlaybookEnvelope; summary?: string; error?: string }>({
         type: 'AGENT_EXECUTE_PLAYBOOK',
@@ -221,14 +262,16 @@ export function useAgent() {
       if (res?.ok) {
         if (res.playbook) setPlaybook(res.playbook);
         setStatusLine(res.summary || 'Đã chạy kịch bản');
+        setStage('playbook');
       } else {
         setStrategyError(res?.error || 'Chạy kịch bản thất bại');
       }
       return res;
     } finally {
+      window.clearInterval(pollId);
       setBusy(false);
     }
-  }, []);
+  }, [startProgressPoll]);
 
   const clearPlaybook = React.useCallback(async () => {
     await sendMessage({ type: 'AGENT_CLEAR_PLAYBOOK' });

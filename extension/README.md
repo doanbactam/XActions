@@ -31,11 +31,12 @@ Tab **Agent** ưu tiên **Strategist**, không phải chat-first:
 
 1. **Phân tích** — scrape profile / tweets / engagement / home feed (SW nền + notification)  
 2. **Đối tượng + phong cách** — Grok chẩn đoán niche, voice, ICP  
-3. **Kịch bản** — allowlist tools only; deny block/delete/post; auto `x_stop_all`  
-4. **Chạy** — tick từng bước · Force cho ⚠️ · unfollow `dryRun`  
-5. **Chat** — nhận playbook context trong system prompt  
+3. **Safety (AI + rules)** — `safetyAnalysis`: overallRisk, caps, guardrails, per-step risk; ép dryRun unfollow, confirm high-risk, tắt growth suite nếu conservative  
+4. **Kịch bản** — ~90 allowlist tools (nav · scrape · analytics · bulk · draft LLM); deny block/mute/delete/post/DM; auto `x_stop_all`  
+5. **Chạy** — tick từng bước · Force cho ⚠️ · cap theo `recommendedCaps`  
+6. **Chat** — nhận playbook + safety context trong system prompt  
 
-Safety: `PLAYBOOK_ALLOWLIST` / `DENYLIST` · handle từ Account Switcher (không nhầm `/home`).  
+Safety: `PLAYBOOK_ALLOWLIST` (~90) / `DENYLIST` / `analyzeSafety()` (AI schema + rule engine) · handle từ Account Switcher.  
 Module: `agent/strategist.js` · SW: `AGENT_RUN_STRATEGY` / `AGENT_EXECUTE_PLAYBOOK` / `AGENT_UPDATE_STEPS`.
 
 | Kind | Ví dụ | Ghi chú |
