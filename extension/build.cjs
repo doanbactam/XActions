@@ -15,11 +15,23 @@ const INCLUDE = [
   'README.md',
   'agent/catalog.js',
   'agent/tools.js',
+  'agent/http-client.bundle.js',
+  'agent/http-client-entry.js',
   'agent/agent-core.js',
   'agent/llm.js',
   'agent/xai-oauth.js',
   'agent/strategist.js',
   'background/service-worker.js',
+  'background/state.js',
+  'background/notifications.js',
+  'background/activity.js',
+  'background/tabs.js',
+  'background/automations.js',
+  'background/http-tools.js',
+  'background/agent.js',
+  'background/alarms.js',
+  'background/menus.js',
+  'background/web-request.js',
   'content/bridge.js',
   'content/injected.js',
   'popup/popup.html',
@@ -35,9 +47,13 @@ const INCLUDE = [
   'icons/icon128.png',
 ];
 
-// popup.bundle.js + dashboard.bundle.js are esbuild outputs (minified IIFE) —
-// skip node's --check, which chokes on some modern syntax esbuild lowers differently.
-const JS_CHECK = INCLUDE.filter((f) => f.endsWith('.js') && f !== 'popup/popup.bundle.js' && f !== 'dashboard/dashboard.bundle.js');
+// Bundle outputs are esbuild-generated minified IIFE — skip node's --check.
+// http-client-entry.js is ESM consumed by esbuild, not loaded directly.
+const JS_CHECK = INCLUDE.filter((f) =>
+  f.endsWith('.js') &&
+  !f.endsWith('.bundle.js') &&
+  f !== 'agent/http-client-entry.js'
+);
 
 function fail(msg) {
   console.error('❌', msg);
@@ -82,7 +98,7 @@ function checkManifest(manifest) {
   if (!manifest.background?.service_worker) fail('background.service_worker required');
   if (!manifest.action?.default_popup) fail('action.default_popup required');
   const perms = new Set(manifest.permissions || []);
-  for (const p of ['storage', 'tabs', 'scripting', 'notifications']) {
+  for (const p of ['storage', 'tabs', 'scripting', 'notifications', 'cookies']) {
     if (!perms.has(p)) fail(`Missing permission: ${p}`);
   }
   ok(`Manifest v${manifest.version} OK`);
@@ -189,9 +205,16 @@ function buildPopup() {
   ok('Popup bundle built (React + TypeScript + Base UI)');
 }
 
+function buildHttpClient() {
+  const esb = spawnSync('node', ['scripts/build-http-client.mjs'], { cwd: ROOT, encoding: 'utf8' });
+  if (esb.status !== 0) fail(`HTTP client bundle build failed:\n${esb.stdout || esb.stderr}`);
+  ok('HTTP client bundle built');
+}
+
 function main() {
   console.log('\n🔧 XActions Extension build\n');
   buildPopup();
+  buildHttpClient();
   const manifest = readManifest();
   checkFiles();
   checkSyntax();

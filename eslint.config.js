@@ -11,6 +11,8 @@ export default [
       'extension/**/*.mjs',
       'extension/**/*.ts',
       'extension/**/*.tsx',
+      'extension/**/*.bundle.js',
+      'extension/**/*.bundle.css',
     ],
   },
   js.configs.recommended,

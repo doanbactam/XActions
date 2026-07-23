@@ -43,6 +43,31 @@
     update_persona: 'x_update_persona',
   };
 
+  // Tools that can run over the internal HTTP API without a visible x.com tab.
+  const HTTP_TOOL_NAMES = new Set([
+    'x_like',
+    'x_unlike',
+    'x_retweet',
+    'x_unretweet',
+    'x_bookmark',
+    'x_unbookmark',
+    'x_follow',
+    'x_unfollow',
+    'x_mute_user',
+    'x_unmute_user',
+    'x_block_user',
+    'x_unblock_user',
+    'x_post_tweet',
+    'x_reply',
+    'x_quote_tweet',
+    'x_delete_tweet',
+    'x_pin_tweet',
+    'x_unpin_tweet',
+    'x_get_profile_stats',
+    'x_get_tweet_detail',
+    'x_search_tweets',
+  ]);
+
   function getDefs() {
     return globalThis.XActionsCatalog?.TOOL_DEFINITIONS || [];
   }
@@ -284,6 +309,226 @@
     }
   }
 
+  function extractIdOrUrl(args) {
+    return args.tweetId || args.id || args.url || args.tweet || '';
+  }
+
+  function extractText(args) {
+    return args.text || args.content || args.message || args.body || '';
+  }
+
+  function extractUsername(args) {
+    const raw = args.username || args.user || args.handle || args.screenName || '';
+    return cleanUsername(raw);
+  }
+
+  function extractTweetId(input) {
+    if (!input) return null;
+    const s = String(input).trim();
+    if (/^\d+$/.test(s)) return s;
+    const m = s.match(/(?:x\.com|twitter\.com)\/[^/]+\/status\/(\d+)/);
+    if (m) return m[1];
+    const n = s.match(/status\/(\d+)/);
+    return n ? n[1] : null;
+  }
+
+  function cleanUsername(input) {
+    if (!input) return null;
+    const s = String(input).trim().replace(/^@/, '');
+    if (/^[a-zA-Z0-9_]{1,15}$/i.test(s)) return s.toLowerCase();
+    const m = String(input).match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]{1,15})(?:\/|\?|#|$)/);
+    if (m) {
+      const reserved = new Set([
+        'i', 'home', 'search', 'explore', 'notifications', 'messages',
+        'settings', 'compose', 'login', 'logout', 'signup', 'share', 'intent', 'account',
+      ]);
+      if (!reserved.has(m[1].toLowerCase())) return m[1].toLowerCase();
+    }
+    return null;
+  }
+
+  async function resolveUserId(api, username) {
+    const profile = await api.profile.scrapeProfile(api.client, username);
+    if (!profile?.id) throw new Error(`User @${username} not found`);
+    return profile.id;
+  }
+
+  function tweetIdFrom(args) {
+    const id = extractTweetId(extractIdOrUrl(args));
+    if (!id) throw new Error('Invalid tweet id or URL');
+    return id;
+  }
+
+  function usernameFrom(args) {
+    const username = extractUsername(args);
+    if (!username) throw new Error('Invalid username');
+    return username;
+  }
+
+  function normalizeCreatedTweet(tweet) {
+    return {
+      id: tweet?.rest_id || tweet?.legacy?.id_str || tweet?.id || null,
+      text: tweet?.legacy?.full_text || tweet?.text || '',
+    };
+  }
+
+  function normalizeProfile(profile) {
+    return {
+      id: profile?.id || null,
+      username: profile?.username || '',
+      displayName: profile?.name || '',
+      bio: profile?.bio || '',
+      followersCount: profile?.followers ?? profile?.followersCount ?? 0,
+      followingCount: profile?.following ?? profile?.followingCount ?? 0,
+      tweetsCount: profile?.tweets ?? profile?.tweetsCount ?? 0,
+      isVerified: profile?.verified ?? false,
+    };
+  }
+
+  function createHttpApi(client) {
+    const http = globalThis.XActionsHttpClient;
+    if (!http) throw new Error('XActionsHttpClient not loaded');
+    return {
+      client,
+      engagement: http.engagement,
+      actions: http.actions,
+      profile: http.profile,
+      tweets: http.tweets,
+      search: http.search,
+    };
+  }
+
+  const HTTP_HANDLERS = {
+    x_like: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.likeTweet(api.client, tweetId);
+      return { success: true, action: 'like', tweet: tweetId };
+    },
+    x_unlike: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unlikeTweet(api.client, tweetId);
+      return { success: true, action: 'unlike', tweet: tweetId };
+    },
+    x_retweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.retweet(api.client, tweetId);
+      return { success: true, action: 'retweet', tweet: tweetId };
+    },
+    x_unretweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unretweet(api.client, tweetId);
+      return { success: true, action: 'unretweet', tweet: tweetId };
+    },
+    x_bookmark: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.bookmarkTweet(api.client, tweetId);
+      return { success: true, action: 'bookmark', tweet: tweetId };
+    },
+    x_unbookmark: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unbookmarkTweet(api.client, tweetId);
+      return { success: true, action: 'unbookmark', tweet: tweetId };
+    },
+    x_follow: async (api, a) => {
+      const username = usernameFrom(a);
+      await api.engagement.followByUsername(api.client, username);
+      return { success: true, action: 'follow', user: username };
+    },
+    x_unfollow: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unfollowUser(api.client, userId);
+      return { success: true, action: 'unfollow', user: username };
+    },
+    x_mute_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.muteUser(api.client, userId);
+      return { success: true, action: 'mute', user: username };
+    },
+    x_unmute_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unmuteUser(api.client, userId);
+      return { success: true, action: 'unmute', user: username };
+    },
+    x_block_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.blockUser(api.client, userId);
+      return { success: true, action: 'block', user: username };
+    },
+    x_unblock_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unblockUser(api.client, userId);
+      return { success: true, action: 'unblock', user: username };
+    },
+    x_post_tweet: async (api, a) => {
+      const text = extractText(a);
+      const tweet = await api.actions.postTweet(api.client, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'post', tweetId: normalized.id, text: normalized.text };
+    },
+    x_reply: async (api, a) => {
+      const text = extractText(a);
+      const replyTo = tweetIdFrom(a);
+      const tweet = await api.actions.replyToTweet(api.client, replyTo, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'reply', tweetId: normalized.id, text: normalized.text, replyTo };
+    },
+    x_quote_tweet: async (api, a) => {
+      const text = extractText(a);
+      const quoted = tweetIdFrom(a);
+      const tweet = await api.actions.quoteTweet(api.client, quoted, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'quote', tweetId: normalized.id, text: normalized.text, quoted };
+    },
+    x_delete_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.actions.deleteTweet(api.client, tweetId);
+      return { success: true, action: 'delete', tweet: tweetId };
+    },
+    x_pin_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.pinTweet(api.client, tweetId);
+      return { success: true, action: 'pin', tweet: tweetId };
+    },
+    x_unpin_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unpinTweet(api.client, tweetId);
+      return { success: true, action: 'unpin', tweet: tweetId };
+    },
+    x_get_profile_stats: async (api, a) => {
+      const username = usernameFrom(a);
+      const profile = await api.profile.scrapeProfile(api.client, username);
+      return { success: true, profile: normalizeProfile(profile) };
+    },
+    x_get_tweet_detail: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      const tweet = await api.tweets.scrapeTweetById(api.client, tweetId);
+      if (!tweet) throw new Error('Tweet not found or unavailable');
+      return { success: true, tweet };
+    },
+    x_search_tweets: async (api, a) => {
+      const query = a.query || a.q || extractText(a);
+      if (!query) throw new Error('Search query required');
+      const count = Math.min(Math.max(Number(a.max) || Number(a.count) || 10, 1), 50);
+      const tweets = await api.search.searchTweets(api.client, query, { limit: count });
+      return { success: true, query, count: tweets.length, tweets };
+    },
+  };
+
+  async function runHttpTool(client, name, a) {
+    if (!client?.isAuthenticated || !client.isAuthenticated()) {
+      throw new Error('HTTP client not authenticated');
+    }
+    const handler = HTTP_HANDLERS[name];
+    if (!handler) return null;
+    const api = createHttpApi(client);
+    return handler(api, a || {});
+  }
+
   async function executeTool(name, args, ctx) {
     let n = name;
     let a = args || {};
@@ -494,6 +739,9 @@
     }
 
     // ── Page (all remaining x_* tools) ──
+    // HTTP-backed tools are handled by the hybrid pageTool wrapper injected
+    // from the service worker (runHybridPageTool) so the HTTP path is tried
+    // once and only falls back to the DOM when necessary.
     if (!ctx.pageTool) return { error: 'Open x.com tab for page tools' };
     return ctx.pageTool(n, a);
   }
@@ -526,6 +774,8 @@
     },
     systemPrompt,
     executeTool,
+    runHttpTool,
+    HTTP_TOOL_NAMES,
     AUTOMATION_IDS,
     AUTO_MAP,
   };

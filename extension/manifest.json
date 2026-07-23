@@ -14,6 +14,7 @@
     "contextMenus",
     "notifications",
     "tabs",
+    "cookies",
     "sidePanel",
     "webRequest"
   ],
@@ -66,12 +67,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-
-  "web_accessible_resources": [
-    {
-      "resources": ["content/injected.js"],
-      "matches": ["https://x.com/*", "https://twitter.com/*"]
-    }
-  ]
+  }
 }

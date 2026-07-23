@@ -125,6 +125,17 @@ export interface AgentConfigResponse {
   toolCount?: number;
 }
 
+export interface AgentBackgroundConfig {
+  backgroundMode: boolean;
+  schedule: AgentScheduleConfig | null;
+}
+
+export interface AgentScheduleConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  nextRunAt: number | null;
+}
+
 export interface AgentStrategyProgress {
   phase: AgentStage | 'idle' | 'done';
   label: string;

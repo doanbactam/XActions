@@ -6,12 +6,14 @@ import * as React from 'react';
 import { sendMessage } from './rpc';
 import type {
   AgentChatMessage,
+  AgentBackgroundConfig,
   AgentConfigResponse,
   AgentLlmConfig,
   AgentOauthInfo,
   AgentPersonaConfig,
   AgentPlaybookEnvelope,
   AgentSafetyConfig,
+  AgentScheduleConfig,
   AgentStage,
 } from '../types';
 
@@ -35,6 +37,8 @@ export function useAgent() {
   const [stage, setStage] = React.useState<AgentStage>('setup');
   const [statusLine, setStatusLine] = React.useState('Sẵn sàng phân tích');
   const [strategyError, setStrategyError] = React.useState<string | null>(null);
+  const [backgroundMode, setBackgroundMode] = React.useState(false);
+  const [schedule, setSchedule] = React.useState<AgentScheduleConfig | null>(null);
   const pollTimer = React.useRef<number | null>(null);
 
   const loadConfig = React.useCallback(async () => {
@@ -47,6 +51,32 @@ export function useAgent() {
       if (res.oauth) setOauth(res.oauth);
       if (res.oauth?.signedIn) setStage((s) => (s === 'setup' ? 'analyze' : s));
     }
+  }, []);
+
+  const loadBackground = React.useCallback(async () => {
+    const res = await sendMessage<AgentBackgroundConfig>({ type: 'AGENT_GET_BACKGROUND' });
+    if (res) {
+      setBackgroundMode(res.backgroundMode);
+      setSchedule(res.schedule);
+    }
+  }, []);
+
+  const setBackground = React.useCallback(async (enabled: boolean) => {
+    const res = await sendMessage<{ success: boolean; backgroundMode: boolean }>({
+      type: 'AGENT_SET_BACKGROUND',
+      enabled,
+    });
+    if (res?.success) setBackgroundMode(res.backgroundMode);
+    return res?.backgroundMode ?? enabled;
+  }, []);
+
+  const setPlaybookSchedule = React.useCallback(async (next: Partial<AgentScheduleConfig>) => {
+    const res = await sendMessage<{ success: boolean; schedule: AgentScheduleConfig }>({
+      type: 'AGENT_SCHEDULE_PLAYBOOK',
+      schedule: { enabled: false, intervalMinutes: 60, nextRunAt: null, ...next },
+    });
+    if (res?.success) setSchedule(res.schedule);
+    return res?.schedule ?? null;
   }, []);
 
   const startOauthPoll = React.useCallback(
@@ -100,6 +130,7 @@ export function useAgent() {
   React.useEffect(() => {
     (async () => {
       await loadConfig();
+      await loadBackground();
       await resumeOauthIfPending();
     })();
     loadPlaybook();
@@ -249,6 +280,8 @@ export function useAgent() {
     stage,
     statusLine,
     strategyError,
+    backgroundMode,
+    schedule,
     saveConfig,
     startOauth,
     logoutOauth,
@@ -259,6 +292,8 @@ export function useAgent() {
     updateSteps,
     sendChat,
     clearHistory,
+    setBackground,
+    setPlaybookSchedule,
   };
 }
 
