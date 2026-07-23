@@ -318,110 +318,215 @@
   }
 
   function extractUsername(args) {
-    return args.username || args.user || args.handle || args.screenName || '';
+    const raw = args.username || args.user || args.handle || args.screenName || '';
+    return cleanUsername(raw);
   }
 
+  function extractTweetId(input) {
+    if (!input) return null;
+    const s = String(input).trim();
+    if (/^\d+$/.test(s)) return s;
+    const m = s.match(/(?:x\.com|twitter\.com)\/[^/]+\/status\/(\d+)/);
+    if (m) return m[1];
+    const n = s.match(/status\/(\d+)/);
+    return n ? n[1] : null;
+  }
+
+  function cleanUsername(input) {
+    if (!input) return null;
+    const s = String(input).trim().replace(/^@/, '');
+    if (/^[a-zA-Z0-9_]{1,15}$/i.test(s)) return s.toLowerCase();
+    const m = String(input).match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]{1,15})(?:\/|\?|#|$)/);
+    if (m) {
+      const reserved = new Set([
+        'i', 'home', 'search', 'explore', 'notifications', 'messages',
+        'settings', 'compose', 'login', 'logout', 'signup', 'share', 'intent', 'account',
+      ]);
+      if (!reserved.has(m[1].toLowerCase())) return m[1].toLowerCase();
+    }
+    return null;
+  }
+
+  async function resolveUserId(api, username) {
+    const profile = await api.profile.scrapeProfile(api.client, username);
+    if (!profile?.id) throw new Error(`User @${username} not found`);
+    return profile.id;
+  }
+
+  function tweetIdFrom(args) {
+    const id = extractTweetId(extractIdOrUrl(args));
+    if (!id) throw new Error('Invalid tweet id or URL');
+    return id;
+  }
+
+  function usernameFrom(args) {
+    const username = extractUsername(args);
+    if (!username) throw new Error('Invalid username');
+    return username;
+  }
+
+  function normalizeCreatedTweet(tweet) {
+    return {
+      id: tweet?.rest_id || tweet?.legacy?.id_str || tweet?.id || null,
+      text: tweet?.legacy?.full_text || tweet?.text || '',
+    };
+  }
+
+  function normalizeProfile(profile) {
+    return {
+      id: profile?.id || null,
+      username: profile?.username || '',
+      displayName: profile?.name || '',
+      bio: profile?.bio || '',
+      followersCount: profile?.followers ?? profile?.followersCount ?? 0,
+      followingCount: profile?.following ?? profile?.followingCount ?? 0,
+      tweetsCount: profile?.tweets ?? profile?.tweetsCount ?? 0,
+      isVerified: profile?.verified ?? false,
+    };
+  }
+
+  function createHttpApi(client) {
+    const http = globalThis.XActionsHttpClient;
+    if (!http) throw new Error('XActionsHttpClient not loaded');
+    return {
+      client,
+      engagement: http.engagement,
+      actions: http.actions,
+      profile: http.profile,
+      tweets: http.tweets,
+      search: http.search,
+    };
+  }
+
+  const HTTP_HANDLERS = {
+    x_like: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.likeTweet(api.client, tweetId);
+      return { success: true, action: 'like', tweet: tweetId };
+    },
+    x_unlike: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unlikeTweet(api.client, tweetId);
+      return { success: true, action: 'unlike', tweet: tweetId };
+    },
+    x_retweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.retweet(api.client, tweetId);
+      return { success: true, action: 'retweet', tweet: tweetId };
+    },
+    x_unretweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unretweet(api.client, tweetId);
+      return { success: true, action: 'unretweet', tweet: tweetId };
+    },
+    x_bookmark: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.bookmarkTweet(api.client, tweetId);
+      return { success: true, action: 'bookmark', tweet: tweetId };
+    },
+    x_unbookmark: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unbookmarkTweet(api.client, tweetId);
+      return { success: true, action: 'unbookmark', tweet: tweetId };
+    },
+    x_follow: async (api, a) => {
+      const username = usernameFrom(a);
+      await api.engagement.followByUsername(api.client, username);
+      return { success: true, action: 'follow', user: username };
+    },
+    x_unfollow: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unfollowUser(api.client, userId);
+      return { success: true, action: 'unfollow', user: username };
+    },
+    x_mute_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.muteUser(api.client, userId);
+      return { success: true, action: 'mute', user: username };
+    },
+    x_unmute_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unmuteUser(api.client, userId);
+      return { success: true, action: 'unmute', user: username };
+    },
+    x_block_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.blockUser(api.client, userId);
+      return { success: true, action: 'block', user: username };
+    },
+    x_unblock_user: async (api, a) => {
+      const username = usernameFrom(a);
+      const userId = await resolveUserId(api, username);
+      await api.engagement.unblockUser(api.client, userId);
+      return { success: true, action: 'unblock', user: username };
+    },
+    x_post_tweet: async (api, a) => {
+      const text = extractText(a);
+      const tweet = await api.actions.postTweet(api.client, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'post', tweetId: normalized.id, text: normalized.text };
+    },
+    x_reply: async (api, a) => {
+      const text = extractText(a);
+      const replyTo = tweetIdFrom(a);
+      const tweet = await api.actions.replyToTweet(api.client, replyTo, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'reply', tweetId: normalized.id, text: normalized.text, replyTo };
+    },
+    x_quote_tweet: async (api, a) => {
+      const text = extractText(a);
+      const quoted = tweetIdFrom(a);
+      const tweet = await api.actions.quoteTweet(api.client, quoted, text);
+      const normalized = normalizeCreatedTweet(tweet);
+      return { success: true, action: 'quote', tweetId: normalized.id, text: normalized.text, quoted };
+    },
+    x_delete_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.actions.deleteTweet(api.client, tweetId);
+      return { success: true, action: 'delete', tweet: tweetId };
+    },
+    x_pin_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.pinTweet(api.client, tweetId);
+      return { success: true, action: 'pin', tweet: tweetId };
+    },
+    x_unpin_tweet: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      await api.engagement.unpinTweet(api.client, tweetId);
+      return { success: true, action: 'unpin', tweet: tweetId };
+    },
+    x_get_profile_stats: async (api, a) => {
+      const username = usernameFrom(a);
+      const profile = await api.profile.scrapeProfile(api.client, username);
+      return { success: true, profile: normalizeProfile(profile) };
+    },
+    x_get_tweet_detail: async (api, a) => {
+      const tweetId = tweetIdFrom(a);
+      const tweet = await api.tweets.scrapeTweetById(api.client, tweetId);
+      if (!tweet) throw new Error('Tweet not found or unavailable');
+      return { success: true, tweet };
+    },
+    x_search_tweets: async (api, a) => {
+      const query = a.query || a.q || extractText(a);
+      if (!query) throw new Error('Search query required');
+      const count = Math.min(Math.max(Number(a.max) || Number(a.count) || 10, 1), 50);
+      const tweets = await api.search.searchTweets(api.client, query, { limit: count });
+      return { success: true, query, count: tweets.length, tweets };
+    },
+  };
+
   async function runHttpTool(client, name, a) {
-    if (!client?.isAuthenticated()) {
+    if (!client?.isAuthenticated || !client.isAuthenticated()) {
       throw new Error('HTTP client not authenticated');
     }
-    switch (name) {
-      case 'x_like': {
-        await client.likeTweet(extractIdOrUrl(a));
-        return { success: true, action: 'like', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_unlike': {
-        await client.unlikeTweet(extractIdOrUrl(a));
-        return { success: true, action: 'unlike', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_retweet': {
-        await client.retweet(extractIdOrUrl(a));
-        return { success: true, action: 'retweet', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_unretweet': {
-        await client.unretweet(extractIdOrUrl(a));
-        return { success: true, action: 'unretweet', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_bookmark': {
-        await client.bookmarkTweet(extractIdOrUrl(a));
-        return { success: true, action: 'bookmark', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_unbookmark': {
-        await client.unbookmarkTweet(extractIdOrUrl(a));
-        return { success: true, action: 'unbookmark', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_follow': {
-        await client.followUser(extractUsername(a));
-        return { success: true, action: 'follow', user: extractUsername(a) };
-      }
-      case 'x_unfollow': {
-        await client.unfollowUser(extractUsername(a));
-        return { success: true, action: 'unfollow', user: extractUsername(a) };
-      }
-      case 'x_mute_user': {
-        await client.muteUser(extractUsername(a));
-        return { success: true, action: 'mute', user: extractUsername(a) };
-      }
-      case 'x_unmute_user': {
-        await client.unmuteUser(extractUsername(a));
-        return { success: true, action: 'unmute', user: extractUsername(a) };
-      }
-      case 'x_block_user': {
-        await client.blockUser(extractUsername(a));
-        return { success: true, action: 'block', user: extractUsername(a) };
-      }
-      case 'x_unblock_user': {
-        await client.unblockUser(extractUsername(a));
-        return { success: true, action: 'unblock', user: extractUsername(a) };
-      }
-      case 'x_post_tweet': {
-        const tweet = await client.sendTweet(extractText(a));
-        return { success: true, action: 'post', tweetId: tweet.id, text: tweet.text };
-      }
-      case 'x_reply': {
-        const text = extractText(a);
-        const replyTo = extractIdOrUrl(a);
-        const tweet = await client.sendTweet(text, { replyTo });
-        return { success: true, action: 'reply', tweetId: tweet.id, text: tweet.text, replyTo };
-      }
-      case 'x_quote_tweet': {
-        const text = extractText(a);
-        const quoted = extractIdOrUrl(a);
-        const tweet = await client.sendQuoteTweet(text, quoted);
-        return { success: true, action: 'quote', tweetId: tweet.id, text: tweet.text, quoted };
-      }
-      case 'x_delete_tweet': {
-        await client.deleteTweet(extractIdOrUrl(a));
-        return { success: true, action: 'delete', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_pin_tweet': {
-        await client.pinTweet(extractIdOrUrl(a));
-        return { success: true, action: 'pin', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_unpin_tweet': {
-        await client.unpinTweet(extractIdOrUrl(a));
-        return { success: true, action: 'unpin', tweet: extractIdOrUrl(a) };
-      }
-      case 'x_get_profile_stats': {
-        const profile = await client.getProfile(extractUsername(a));
-        return { success: !!profile, profile };
-      }
-      case 'x_get_tweet_detail': {
-        const tweet = await client.getTweet(extractIdOrUrl(a));
-        return { success: !!tweet, tweet };
-      }
-      case 'x_search_tweets': {
-        const query = a.query || a.q || extractText(a);
-        const count = Math.min(Math.max(Number(a.max) || Number(a.count) || 10, 1), 50);
-        const tweets = [];
-        for await (const t of client.searchTweets(query, count)) {
-          tweets.push(t);
-        }
-        return { success: true, query, count: tweets.length, tweets };
-      }
-      default:
-        return null;
-    }
+    const handler = HTTP_HANDLERS[name];
+    if (!handler) return null;
+    const api = createHttpApi(client);
+    return handler(api, a || {});
   }
 
   async function executeTool(name, args, ctx) {

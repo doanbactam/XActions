@@ -69,6 +69,7 @@ export class TwitterHttpClient {
    * @param {number} [options.maxRetries=3]
    * @param {string|'rotate'} [options.userAgent]
    * @param {function} [options.fetch] - Custom fetch implementation
+   * @param {boolean} [options.browserMode=false] - When true, rely on the browser's cookie jar instead of sending an explicit `Cookie` header
    */
   constructor(options = {}) {
     this._cookies = {};
@@ -76,6 +77,7 @@ export class TwitterHttpClient {
     this._maxRetries = options.maxRetries ?? 3;
     this._fetch = options.fetch || globalThis.fetch;
     this._userAgents = USER_AGENTS;
+    this._browserMode = options.browserMode === true;
 
     if (options.userAgent && options.userAgent !== 'rotate') {
       this._userAgents = [options.userAgent];
@@ -104,11 +106,21 @@ export class TwitterHttpClient {
   // ---- Cookie management --------------------------------------------------
 
   /**
-   * Parse and store cookies from a browser-exported cookie string.
-   * @param {string} cookieString - `auth_token=xxx; ct0=yyy; ...`
+   * Parse and store cookies from a browser-exported cookie string or an
+   * array of cookie objects (e.g. from chrome.cookies.getAll).
+   * @param {string|Array<{name?: string, value?: string}>} cookieString - `auth_token=xxx; ct0=yyy; ...`
    */
   setCookies(cookieString) {
+    this._cookies = {};
     if (!cookieString) return;
+
+    if (Array.isArray(cookieString)) {
+      for (const c of cookieString) {
+        if (c?.name) this._cookies[c.name] = c.value || '';
+      }
+      return;
+    }
+
     const pairs = cookieString.split(';').map((p) => p.trim()).filter(Boolean);
     for (const pair of pairs) {
       const eqIdx = pair.indexOf('=');
@@ -152,10 +164,13 @@ export class TwitterHttpClient {
     if (authenticated && this.isAuthenticated()) {
       headers['x-csrf-token'] = this.getCsrfToken();
       headers['x-twitter-auth-type'] = 'OAuth2Session';
-      // Rebuild cookie string
-      headers.cookie = Object.entries(this._cookies)
-        .map(([k, v]) => `${k}=${v}`)
-        .join('; ');
+      if (!this._browserMode) {
+        // In Node.js we send the cookie header explicitly; in the browser
+        // the fetch API attaches the cookies for the origin automatically.
+        headers.cookie = Object.entries(this._cookies)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('; ');
+      }
     }
 
     return headers;
@@ -184,10 +199,15 @@ export class TwitterHttpClient {
         : options.body;
 
     let lastError;
+    const fetchOptions = { method, headers, body };
+    if (this._browserMode) {
+      fetchOptions.credentials = 'include';
+    }
+
     for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
       const startTime = Date.now();
       try {
-        const res = await this._fetch(url, { method, headers, body });
+        const res = await this._fetch(url, fetchOptions);
         const elapsed = Date.now() - startTime;
         if (this._debug) {
           console.log(`[TwitterHttpClient] ${method} ${url} → ${res.status} (${elapsed}ms)`);

@@ -1,6 +1,45 @@
 // XActions Extension — HTTP-first tool dispatcher with DOM fallback.
 // by nichxbt
 
+/**
+ * @typedef {import('../../src/scrapers/twitter/http/client.js').TwitterHttpClient} TwitterHttpClient
+ * The shared {@link TwitterHttpClient} exposed by the bundled HTTP client.
+ */
+
+/**
+ * @typedef {object} ToolArgs
+ * @property {string} [tweetId]
+ * @property {string} [id]
+ * @property {string} [url]
+ * @property {string} [tweet]
+ * @property {string} [username]
+ * @property {string} [user]
+ * @property {string} [text]
+ * @property {string} [content]
+ * @property {string} [query]
+ * @property {string} [q]
+ * @property {number} [max]
+ * @property {number} [count]
+ */
+
+/**
+ * @typedef {object} ToolResult
+ * @property {boolean} success
+ * @property {string} [action]
+ * @property {string} [tweet]
+ * @property {string} [tweetId]
+ * @property {string} [text]
+ * @property {object} [profile]
+ * @property {object} [tweet]
+ * @property {Array} [tweets]
+ * @property {string} [error]
+ */
+
+/**
+ * @typedef {Error} NoFallbackError
+ * Errors that should not trigger a DOM fallback (auth, not found, rate limit, bad args).
+ */
+
 (() => {
   const { runPageTool } = globalThis.XActionsBackgroundTabs;
 
@@ -17,6 +56,12 @@
     return true;
   }
 
+  /**
+   * Build (or reuse) a browser-mode {@link TwitterHttpClient} seeded with the
+   * user's x.com / twitter.com cookies.
+   * @param {boolean} [force] - Ignore the cached instance and create a fresh one.
+   * @returns {Promise<TwitterHttpClient>}
+   */
   async function getHttpClient(force = false) {
     if (!force && cachedClient && Date.now() - cachedAt < CLIENT_CACHE_TTL_MS) {
       return cachedClient;
@@ -47,6 +92,13 @@
     return client;
   }
 
+  /**
+   * Try an HTTP-backed tool first; fall back to the DOM page tool only when the
+   * HTTP path reports a transient / retryable error.
+   * @param {string} name - Tool name (e.g. `x_like`).
+   * @param {ToolArgs} [args] - Tool arguments.
+   * @returns {Promise<ToolResult>}
+   */
   async function runHybridPageTool(name, args) {
     const httpToolNames = globalThis.XActionsTools?.HTTP_TOOL_NAMES;
     if (!httpToolNames?.has?.(name) || !globalThis.XActionsTools?.runHttpTool) {
